@@ -123,3 +123,27 @@ test_that("create_output_structure works for both algorithms", {
   expect_true(!is.null(cbd_out$uncertainty))
   expect_true(!is.null(cbd_out$posterior_params))
 })
+
+test_that("create_output_structure validates inputs", {
+  spatial_maps <- matrix(rnorm(100 * 3), nrow = 100, ncol = 3)
+  temporal_ok <- matrix(rnorm(3 * 50), nrow = 3, ncol = 50)
+
+  temporal_bad_dim <- matrix(rnorm(2 * 50), nrow = 2, ncol = 50)
+  expect_error(
+    create_output_structure(spatial_maps, temporal_bad_dim, list(), "CLD"),
+    "Number of rows in temporal_activations"
+  )
+
+  spatial_bad_type <- matrix("a", nrow = 100, ncol = 3)
+  expect_error(
+    create_output_structure(spatial_bad_type, temporal_ok, list(), "CLD"),
+    "spatial_maps must be a numeric matrix"
+  )
+
+  temporal_bad_type <- matrix("a", nrow = 3, ncol = 50)
+  expect_error(
+    create_output_structure(spatial_maps, temporal_bad_type, list(), "CLD"),
+    "temporal_activations must be a numeric matrix"
+  )
+})
+

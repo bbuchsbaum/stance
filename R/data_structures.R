@@ -307,10 +307,25 @@ check_temporal_alignment <- function(Y_info, design, TR, tolerance = 0.1) {
 #' @return List with standardized structure
 #' 
 #' @export
-create_output_structure <- function(spatial_maps, temporal_activations, 
+create_output_structure <- function(spatial_maps, temporal_activations,
                                     metadata, algorithm = c("CLD", "CBD"),
                                     additional_info = list()) {
   algorithm <- match.arg(algorithm)
+
+  if (!is.matrix(spatial_maps) || !is.numeric(spatial_maps)) {
+    stop("spatial_maps must be a numeric matrix")
+  }
+
+  if (!is.matrix(temporal_activations) || !is.numeric(temporal_activations)) {
+    stop("temporal_activations must be a numeric matrix")
+  }
+
+  if (nrow(temporal_activations) != ncol(spatial_maps)) {
+    stop(sprintf(
+      "Number of rows in temporal_activations (%d) must equal number of columns in spatial_maps (%d)",
+      nrow(temporal_activations), ncol(spatial_maps)
+    ))
+  }
   
   output <- list(
     algorithm = algorithm,
