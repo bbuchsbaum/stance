@@ -224,6 +224,20 @@ forward_pass_rcpp <- function(log_lik, Pi, pi0) {
     .Call(`_stance_forward_pass_rcpp`, log_lik, Pi, pi0)
 }
 
+#' Backward Algorithm (Rcpp)
+#'
+#' Computes scaled backward probabilities for an HMM.
+#'
+#' @param log_lik Matrix of log-likelihoods (K x T)
+#' @param Pi      Transition matrix (K x K)
+#' @param c_scale Scaling factors from forward pass
+#'
+#' @return Beta matrix (K x T)
+#' @keywords internal
+backward_pass_rcpp <- function(log_lik, Pi, c_scale) {
+    .Call(`_stance_backward_pass_rcpp`, log_lik, Pi, c_scale)
+}
+
 #' Parallel Voxel-wise GLM Fitting
 #' 
 #' Fits GLMs for multiple voxels in parallel using OpenMP.

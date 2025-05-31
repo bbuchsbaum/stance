@@ -199,6 +199,20 @@ BEGIN_RCPP
 END_RCPP
 }
 
+// backward_pass_rcpp
+arma::mat backward_pass_rcpp(const arma::mat& log_lik, const arma::mat& Pi, const arma::vec& c_scale);
+RcppExport SEXP _stance_backward_pass_rcpp(SEXP log_likSEXP, SEXP PiSEXP, SEXP c_scaleSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type log_lik(log_likSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Pi(PiSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type c_scale(c_scaleSEXP);
+    rcpp_result_gen = Rcpp::wrap(backward_pass_rcpp(log_lik, Pi, c_scale));
+    return rcpp_result_gen;
+END_RCPP
+}
+
 // parallel_glm_fit_rcpp
 arma::mat parallel_glm_fit_rcpp(const arma::mat& Y, const arma::mat& X_conv, int n_threads, int chunk_size);
 RcppExport SEXP _stance_parallel_glm_fit_rcpp(SEXP YSEXP, SEXP X_convSEXP, SEXP n_threadsSEXP, SEXP chunk_sizeSEXP) {
@@ -310,6 +324,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_prox_tv_dual", (DL_FUNC) &_stance_prox_tv_dual, 4},
     {"_stance_convolve_voxel_hrf_rcpp", (DL_FUNC) &_stance_convolve_voxel_hrf_rcpp, 4},
     {"_stance_forward_pass_rcpp", (DL_FUNC) &_stance_forward_pass_rcpp, 3},
+    {"_stance_backward_pass_rcpp", (DL_FUNC) &_stance_backward_pass_rcpp, 3},
     {NULL, NULL, 0}
 };
 
