@@ -114,3 +114,24 @@ update_hrf_coefficients_r <- function(Y, S_gamma, U, V, hrf_basis, L_gmrf,
 }
 
 update_hrf_coefficients_gmrf_cpp <- update_hrf_coefficients_r
+
+#' Log-likelihood kernel (fallback)
+#' @keywords internal
+compute_log_likelihoods_r <- function(Y_proj, Vmat, hrf_kernel, sigma2) {
+  r <- nrow(Y_proj)
+  T_len <- ncol(Y_proj)
+  K <- nrow(Vmat)
+  sigma2 <- max(sigma2, 1e-8)
+  const_term <- -0.5 * r * log(2 * pi * sigma2)
+  h_at_t <- rep(hrf_kernel[1], T_len)
+  log_lik <- matrix(0, K, T_len)
+  for (k in seq_len(K)) {
+    mu_proj_k <- outer(Vmat[k, ], h_at_t)
+    diff <- Y_proj - mu_proj_k
+    log_lik[k, ] <- const_term - 0.5 * colSums(diff^2) / sigma2
+  }
+  log_lik
+}
+
+# Use R implementation as fallback
+compute_log_likelihoods_rcpp <- compute_log_likelihoods_r
