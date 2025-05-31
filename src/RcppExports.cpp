@@ -81,6 +81,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+
+// convolve_voxel_hrf_rcpp
+arma::cube convolve_voxel_hrf_rcpp(const arma::mat& design, const arma::mat& hrfs, int fft_threshold, int n_threads);
+RcppExport SEXP _stance_convolve_voxel_hrf_rcpp(SEXP designSEXP, SEXP hrfsSEXP, SEXP fft_thresholdSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type design(designSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type hrfs(hrfsSEXP);
+    Rcpp::traits::input_parameter< int >::type fft_threshold(fft_thresholdSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(convolve_voxel_hrf_rcpp(design, hrfs, fft_threshold, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // fista_tv_rcpp
 List fista_tv_rcpp(const arma::mat& WtY, const arma::mat& W, const arma::vec& hrf_kernel, double lambda_tv, double L_fista, const arma::mat& X_init, int max_iter, double tol, bool verbose);
 RcppExport SEXP _stance_fista_tv_rcpp(SEXP WtYSEXP, SEXP WSEXP, SEXP hrf_kernelSEXP, SEXP lambda_tvSEXP, SEXP L_fistaSEXP, SEXP X_initSEXP, SEXP max_iterSEXP, SEXP tolSEXP, SEXP verboseSEXP) {
@@ -263,6 +278,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_prox_tv_condat_rcpp", (DL_FUNC) &_stance_prox_tv_condat_rcpp, 3},
     {"_stance_compute_tv_rcpp", (DL_FUNC) &_stance_compute_tv_rcpp, 1},
     {"_stance_prox_tv_dual", (DL_FUNC) &_stance_prox_tv_dual, 4},
+    {"_stance_convolve_voxel_hrf_rcpp", (DL_FUNC) &_stance_convolve_voxel_hrf_rcpp, 4},
     {NULL, NULL, 0}
 };
 

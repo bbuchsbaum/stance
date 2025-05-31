@@ -87,6 +87,23 @@ convolve_rows_rcpp <- function(X, hrf, n_threads = 0L) {
     .Call(`_stance_convolve_rows_rcpp`, X, hrf, n_threads)
 }
 
+#' Voxel-specific HRF convolution
+#'
+#' Performs convolution of each row of `design` with each voxel's HRF.
+#' Currently always uses direct convolution; `fft_threshold` is kept
+#' for compatibility with unit tests.
+#'
+#' @param design Matrix of regressors (K x T)
+#' @param hrfs   Matrix of HRF kernels (V x L)
+#' @param fft_threshold Integer threshold for FFT (default 256)
+#' @param n_threads Number of threads to use (0 = auto)
+#'
+#' @return 3D array (V x K x T)
+#' @keywords internal
+convolve_voxel_hrf_rcpp <- function(design, hrfs, fft_threshold = 256L, n_threads = 0L) {
+    .Call(`_stance_convolve_voxel_hrf_rcpp`, design, hrfs, fft_threshold, n_threads)
+}
+
 #' FISTA Solver for CLD
 #' 
 #' Implements the Fast Iterative Shrinkage-Thresholding Algorithm (FISTA)
