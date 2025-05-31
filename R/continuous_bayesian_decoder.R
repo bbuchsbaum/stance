@@ -450,8 +450,48 @@ ContinuousBayesianDecoder <- R6::R6Class(
 
     # Compute ELBO
     .compute_elbo = function() {
-      # TODO: Implement ELBO calculation
-      return(0)
+      log_lik <- private$.compute_log_likelihoods()
+
+      gamma <- private$.S_gamma
+      xi <- private$.S_xi
+      Pi <- private$.Pi
+      pi0 <- private$.pi0
+
+      # Expected log-likelihood
+      elbo_ll <- sum(gamma * log_lik)
+
+      # Entropy terms
+      entropy_gamma <- -sum(gamma * log(gamma + 1e-10))
+      entropy_xi <- 0
+      if (!is.null(xi) && length(dim(xi)) == 3 && dim(xi)[3] > 0) {
+        entropy_xi <- -sum(xi * log(xi + 1e-10))
+      }
+
+      # HMM prior terms
+      prior_term <- sum(log(pi0 + 1e-10) * gamma[, 1])
+      if (!is.null(xi) && length(dim(xi)) == 3 && dim(xi)[3] > 0) {
+        Pi_rep <- array(Pi + 1e-10, dim = dim(xi))
+        prior_term <- prior_term + sum(xi * log(Pi_rep))
+      }
+
+      # Simple Gaussian priors on U and V
+      prior_params <- -0.5 * (sum(private$.U^2) + sum(private$.V^2))
+
+      # GMRF prior on HRF coefficients
+      gmrf_prior <- 0
+      if (!is.null(private$.L_gmrf) && private$.lambda_H_prior > 0 &&
+            !is.null(private$.H_v)) {
+        for (b in seq_len(ncol(private$.H_v))) {
+          h_b <- private$.H_v[, b]
+          gmrf_prior <- gmrf_prior - 0.5 * private$.lambda_H_prior *
+            as.numeric(t(h_b) %*% private$.L_gmrf %*% h_b)
+        }
+      }
+
+      elbo <- elbo_ll + entropy_gamma + entropy_xi + prior_term +
+        prior_params + gmrf_prior
+
+      return(elbo)
     },
 
     # Compute log likelihoods for each state/time
