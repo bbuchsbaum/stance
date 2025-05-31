@@ -521,8 +521,7 @@ ContinuousLinearDecoder <- R6::R6Class(
         # Use full W matrix
         estimate_lipschitz_rcpp(
           W = private$.W,
-          hrf_kernel = private$.hrf,
-          T = ncol(private$.Y)
+          hrf_kernel = private$.hrf
         )
       }
     },

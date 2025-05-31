@@ -150,7 +150,6 @@ arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf) {
 //' 
 //' @param W Spatial maps matrix (V x K)
 //' @param hrf_kernel HRF kernel vector
-//' @param T Number of time points
 //' @param max_iter Maximum iterations for power method
 //' @param tol Convergence tolerance
 //' 
@@ -158,9 +157,8 @@ arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf) {
 //' 
 //' @export
 // [[Rcpp::export]]
-double estimate_lipschitz_rcpp(const arma::mat& W, 
+double estimate_lipschitz_rcpp(const arma::mat& W,
                                const arma::vec& hrf_kernel,
-                               int T,
                                int max_iter = 30,
                                double tol = 1e-6) {
   
@@ -170,9 +168,6 @@ double estimate_lipschitz_rcpp(const arma::mat& W,
   }
   if (hrf_kernel.is_empty()) {
     stop("HRF kernel cannot be empty");
-  }
-  if (T <= 0) {
-    stop("T must be positive");
   }
   
   // Compute W'W
