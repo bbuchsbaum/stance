@@ -282,3 +282,66 @@ plot_diagnostics <- function(decoder_output, which = 1:4, ...) {
   
   invisible(NULL)
 }
+#' Generate QC Report
+#'
+#' Creates a simple HTML quality control report summarizing decoder results.
+#'
+#' @param decoder A \code{ContinuousBayesianDecoder} object.
+#' @param output_file Path to the HTML report to generate.
+#'
+#' @return Invisibly returns the path to \code{output_file}.
+#' @export
+qc_report <- function(decoder, output_file) {
+  if (!inherits(decoder, "ContinuousBayesianDecoder")) {
+    stop("decoder must be a ContinuousBayesianDecoder")
+  }
+
+  out_dir <- dirname(output_file)
+  if (!dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE)
+  }
+
+  tmpdir <- tempfile("qc", tmpdir = out_dir)
+  dir.create(tmpdir)
+
+  # ELBO history plot
+  elbo_file <- file.path(tmpdir, "elbo.png")
+  grDevices::png(elbo_file, width = 800, height = 600)
+  conv <- decoder$get_convergence()
+  plot_convergence(conv$elbo_history, type = "elbo")
+  grDevices::dev.off()
+
+  # Spatial maps
+  maps_file <- file.path(tmpdir, "spatial_maps.png")
+  grDevices::png(maps_file, width = 800, height = 600)
+  plot_spatial_maps(decoder$get_spatial_maps(as_neurovol = FALSE))
+  grDevices::dev.off()
+
+  # State probabilities
+  state_file <- file.path(tmpdir, "state_probs.png")
+  grDevices::png(state_file, width = 800, height = 600)
+  plot_state_timecourse(decoder$get_state_sequence())
+  grDevices::dev.off()
+
+  # Copy images next to output_file
+  file.copy(c(elbo_file, maps_file, state_file), out_dir, overwrite = TRUE)
+  elbo_img <- basename(elbo_file)
+  maps_img <- basename(maps_file)
+  state_img <- basename(state_file)
+
+  html <- paste0(
+    "<html><head><title>QC Report</title></head><body>",
+    "<h1>QC Report</h1>",
+    "<h2>ELBO History</h2>",
+    "<img src='", elbo_img, "' />",
+    "<h2>Spatial Maps</h2>",
+    "<img src='", maps_img, "' />",
+    "<h2>State Probabilities</h2>",
+    "<img src='", state_img, "' />",
+    "</body></html>")
+
+  writeLines(html, output_file)
+  unlink(tmpdir, recursive = TRUE)
+  message("QC report written to ", output_file)
+  invisible(output_file)
+}
