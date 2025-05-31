@@ -490,13 +490,12 @@ ContinuousLinearDecoder <- R6::R6Class(
     .compute_gradient = function(X_current) {
       # Call Rcpp implementation
       H_star_X <- convolve_rows_rcpp(X_current, private$.hrf)
-      
-      compute_gradient_fista_rcpp(
-        Y_or_WtY = private$.WtY,
-        W = private$.get_W(),
+
+      compute_gradient_fista_precomp_rcpp(
+        WtY = private$.WtY,
+        WtW = private$.WtW,
         H_star_X = H_star_X,
-        hrf_kernel = private$.hrf,
-        precomputed_WtY = TRUE
+        hrf_kernel = private$.hrf
       )
     },
     
@@ -514,15 +513,13 @@ ContinuousLinearDecoder <- R6::R6Class(
           U = private$.U_r,
           S = private$.S_r,
           V = private$.V_r,
-          hrf_kernel = private$.hrf,
-          T = ncol(private$.Y)
+          hrf_kernel = private$.hrf
         )
       } else {
         # Use full W matrix
         estimate_lipschitz_rcpp(
           W = private$.W,
-          hrf_kernel = private$.hrf,
-          T = ncol(private$.Y)
+          hrf_kernel = private$.hrf
         )
       }
     },

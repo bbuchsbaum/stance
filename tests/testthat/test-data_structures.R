@@ -139,6 +139,7 @@ test_that("create_output_structure works for both algorithms", {
 })
 
 
+
 test_that("create_output_structure validates inputs", {
   spatial_maps <- matrix(rnorm(100 * 3), nrow = 100, ncol = 3)
   temporal_ok <- matrix(rnorm(3 * 50), nrow = 3, ncol = 50)
@@ -161,6 +162,36 @@ test_that("create_output_structure validates inputs", {
     "temporal_activations must be a numeric matrix"
    )
  })
+})
+
+test_that("restore_spatial_structure sets probabilistic attribute", {
+  skip_if_not_installed("neuroim2")
+
+  space <- neuroim2::NeuroSpace(dim = c(2, 2, 2), spacing = c(1, 1, 1))
+  ref <- neuroim2::NeuroVol(rnorm(8), space)
+
+  # Single spatial map
+  mat_single <- matrix(rnorm(8), nrow = 8, ncol = 1)
+  res_single <- restore_spatial_structure(mat_single, ref,
+                                          output_type = "spatial",
+                                          probabilistic = TRUE)
+  expect_true(!is.null(attr(res_single, "probabilistic")))
+
+  # Multiple spatial maps
+  mat_multi <- matrix(rnorm(16), nrow = 8, ncol = 2)
+  res_multi <- restore_spatial_structure(mat_multi, ref,
+                                         output_type = "spatial",
+                                         probabilistic = TRUE)
+  if (is.list(res_multi)) {
+    expect_true(!is.null(attr(res_multi, "probabilistic")))
+    expect_true(all(vapply(res_multi, function(x)
+      !is.null(attr(x, "probabilistic")), logical(1))))
+  } else {
+    expect_true(!is.null(attr(res_multi, "probabilistic")))
+  }
+})
+
+
 
 test_that("restore_spatial_structure errors on dimension mismatch", {
   skip_if_not_installed("neuroim2")
@@ -185,4 +216,5 @@ test_that("restore_spatial_structure errors on dimension mismatch", {
 
   )
 })
+
 
