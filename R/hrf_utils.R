@@ -10,7 +10,8 @@ NULL
 #' Setup HRF Kernel
 #'
 #' Accepts fmrireg HRF specifications or numeric vectors and normalizes
-#' them to unit energy for consistent convolution operations.
+#' them to unit energy for consistent convolution operations. Invalid HRF
+#' specifications will throw an error.
 #'
 #' @param spec HRF specification: can be a character string matching fmrireg
 #'   HRF types (e.g., "spmg1", "spmg2", "bspline"), a numeric vector, or
@@ -32,9 +33,17 @@ NULL
 #' hrf2 <- setup_hrf_kernel(custom_hrf)
 #' }
 setup_hrf_kernel <- function(spec = "spmg1", TR = 2, len = 32, normalize = TRUE) {
+  validate_hrf_spec(spec, context = "HRF specification")
+
   # Handle numeric vector input
   if (is.numeric(spec)) {
     hrf_vec <- spec
+    if (any(!is.finite(hrf_vec))) {
+      stop("HRF specification contains non-finite values")
+    }
+    if (sum(abs(hrf_vec)) == 0) {
+      stop("HRF specification is all zeros")
+    }
     if (normalize && sum(abs(hrf_vec)) > 0) {
       # Normalize to unit energy (sum of squares = 1)
       hrf_vec <- hrf_vec / sqrt(sum(hrf_vec^2))
