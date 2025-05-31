@@ -71,6 +71,28 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
   if (is.null(rank)) {
     rank <- min(V, K, 20)  # Cap at 20 for efficiency
   }
+
+  # Ensure core parameters are positive integers
+  if (!is.numeric(V) || length(V) != 1 || V <= 0 || V != as.integer(V)) {
+    stop("V must be a positive integer")
+  }
+  if (!is.numeric(T) || length(T) != 1 || T <= 0 || T != as.integer(T)) {
+    stop("T must be a positive integer")
+  }
+  if (!is.numeric(K) || length(K) != 1 || K <= 0 || K != as.integer(K)) {
+    stop("K must be a positive integer")
+  }
+  if (!is.numeric(rank) || length(rank) != 1 || rank <= 0 || rank != as.integer(rank)) {
+    stop("rank must be a positive integer")
+  }
+  if (!is.null(dims)) {
+    if (length(dims) != 3) {
+      stop("dims must have length 3")
+    }
+    if (prod(dims) != V) {
+      stop("product of dims must equal V")
+    }
+  }
   
   # Validate inputs
   if (return_neuroim && is.null(dims)) {
