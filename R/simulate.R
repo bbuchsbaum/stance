@@ -284,15 +284,17 @@ generate_continuous_states <- function(K, T, smooth = TRUE) {
   S <- matrix(0, K, T)
   
   # Create block structure with overlaps
-  block_length <- T / (K * 2)  # Allow for overlaps
+  block_length <- as.integer(max(1, floor(T / (2 * K))))  # Allow for overlaps
   
   for (k in 1:K) {
     # Primary activation periods
     n_blocks <- sample(2:4, 1)
     for (b in 1:n_blocks) {
       start <- sample(1:(T - block_length), 1)
-      end <- min(start + block_length + rnorm(1, 0, block_length/4), T)
-      S[k, start:end] <- rnorm(end - start + 1, mean = 1, sd = 0.2)
+      shift <- as.integer(round(rnorm(1, 0, block_length / 4)))
+      end <- min(start + block_length + shift, T)
+      end <- as.integer(end)
+      S[k, start:end] <- rnorm(as.integer(end - start + 1L), mean = 1, sd = 0.2)
     }
   }
   
