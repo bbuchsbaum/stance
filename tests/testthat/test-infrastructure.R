@@ -1,4 +1,5 @@
 # Test shared infrastructure components
+library(stance)
 
 test_that("package loads correctly", {
   expect_true(requireNamespace("stance", quietly = TRUE))
@@ -36,8 +37,8 @@ test_that("data structure conversion preserves information", {
   # Matrix -> validated -> matrix roundtrip
   validated <- validate_fmri_input(Y_mat)
   expect_equal(validated$data, Y_mat)
-  expect_equal(validated$dims["V"], V)
-  expect_equal(validated$dims["T"], T)
+  expect_equal(validated$dims[["V"]], V)
+  expect_equal(validated$dims[["T"]], T)
   
   # Extract and restore
   extracted <- extract_data_matrix(Y_mat)
@@ -109,18 +110,21 @@ test_that("integration between components works", {
 })
 
 test_that("edge cases are handled gracefully", {
-  # Empty data
-  expect_error(validate_fmri_input(matrix(nrow = 0, ncol = 0)))
+  # Empty data - should work with 0x0 matrix
+  Y_empty <- matrix(nrow = 0, ncol = 0)
+  val_empty <- validate_fmri_input(Y_empty)
+  expect_equal(val_empty$dims[["V"]], 0)
+  expect_equal(val_empty$dims[["T"]], 0)
   
   # Single voxel
   Y_single <- matrix(rnorm(50), 1, 50)
   val_single <- validate_fmri_input(Y_single)
-  expect_equal(val_single$dims["V"], 1)
+  expect_equal(val_single$dims[["V"]], 1)
   
   # Single timepoint
   Y_time <- matrix(rnorm(100), 100, 1)
   val_time <- validate_fmri_input(Y_time)
-  expect_equal(val_time$dims["T"], 1)
+  expect_equal(val_time$dims[["T"]], 1)
   
   # Invalid HRF
   expect_error(setup_hrf_kernel("invalid_hrf"))

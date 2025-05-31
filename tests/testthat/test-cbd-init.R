@@ -23,13 +23,13 @@ test_that("ContinuousBayesianDecoder initializes on simulated data", {
 
   priv <- cbd$.__enclos_env__$private
 
-  expect_equal(priv$.V, V)
+  expect_equal(priv$.n_voxels, V)
   expect_equal(priv$.T, Tlen)
   expect_equal(priv$.K, K)
   expect_equal(priv$.r, 5)
 
   expect_equal(dim(priv$.U), c(V, 5))
-  expect_equal(dim(priv$.V), c(K, 5))
+  expect_equal(dim(priv$.V_coef), c(K, 5))
   expect_equal(dim(priv$.S_gamma), c(K, Tlen))
   expect_equal(dim(priv$.S_xi), c(K, K, Tlen - 1))
   expect_true(is.numeric(priv$.sigma2))

@@ -1,3 +1,5 @@
+library(stance)
+
 test_that("setup_hrf_kernel handles numeric input", {
   # Test with numeric vector
   hrf_numeric <- c(0, 0.1, 0.5, 0.8, 0.6, 0.3, 0.1, 0)

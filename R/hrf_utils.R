@@ -246,6 +246,7 @@ hrf_basis_matrix <- function(basis_type = "spmg3", TR = 2, len = 32, n_basis = N
   
   # Get appropriate basis
   basis_obj <- switch(tolower(basis_type),
+    "canonical" = fmrireg::HRF_SPMG1,  # Canonical HRF
     "spmg1" = fmrireg::HRF_SPMG1,
     "spmg2" = fmrireg::HRF_SPMG2,
     "spmg3" = fmrireg::HRF_SPMG3,

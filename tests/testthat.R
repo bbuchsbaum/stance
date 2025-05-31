@@ -1,4 +1,4 @@
 library(testthat)
 library(stance)
 
-test_check("stance")
+test_check("stance") 

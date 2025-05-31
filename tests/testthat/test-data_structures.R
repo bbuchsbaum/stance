@@ -1,3 +1,5 @@
+library(stance)
+
 test_that("validate_fmri_input works with matrix input", {
   # Create test matrix
   Y_mat <- matrix(rnorm(100 * 50), nrow = 100, ncol = 50)
@@ -5,15 +7,15 @@ test_that("validate_fmri_input works with matrix input", {
   # Test basic validation
   result <- validate_fmri_input(Y_mat)
   expect_equal(result$type, "matrix")
-  expect_equal(result$dims["V"], 100)
-  expect_equal(result$dims["T"], 50)
+  expect_equal(result$dims[["V"]], 100)
+  expect_equal(result$dims[["T"]], 50)
   expect_true(is.matrix(result$data))
   expect_null(result$space)
   expect_null(result$mask)
   
   # Test with expected dimensions
   result2 <- validate_fmri_input(Y_mat, expected_dims = list(V = 100, T = 50))
-  expect_equal(result2$dims["V"], 100)
+  expect_equal(result2$dims[["V"]], 100)
   
   # Test dimension mismatch
   expect_error(
@@ -161,7 +163,6 @@ test_that("create_output_structure validates inputs", {
     create_output_structure(spatial_maps, temporal_bad_type, list(), "CLD"),
     "temporal_activations must be a numeric matrix"
    )
- })
 })
 
 test_that("restore_spatial_structure sets probabilistic attribute", {
@@ -203,7 +204,7 @@ test_that("restore_spatial_structure errors on dimension mismatch", {
 
   expect_error(
     restore_spatial_structure(mat_bad, ref_space, output_type = "temporal"),
-    "10 rows.*8 voxels"
+    "Matrix has 10 rows but spatial reference implies 8 voxels"
   )
 
   # Reference with mask
@@ -212,8 +213,7 @@ test_that("restore_spatial_structure errors on dimension mismatch", {
 
   expect_error(
     restore_spatial_structure(mat_bad, ref_mask, output_type = "temporal"),
-    "10 rows.*5 voxels"
-
+    "Matrix has 10 rows but spatial reference implies 5 voxels"
   )
 })
 

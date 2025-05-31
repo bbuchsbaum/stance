@@ -17,7 +17,7 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
                                       const arma::mat& WtW_precomp = arma::mat());
 
 arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv,
-                              int n_threads = 0);
+                              int n_threads);
 
 arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
                                               const arma::mat& WtW,
@@ -27,7 +27,7 @@ arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
 
 
 arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf,
-                             int n_threads = 0);
+                             int n_threads);
 
 double compute_tv_rcpp(const arma::mat& X);
 
@@ -78,9 +78,13 @@ arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf,
     for (int t = 0; t < T; t++) {
       double sum = 0.0;
       
-      // Convolution sum
-      for (int tau = 0; tau < std::min(h_len, t + 1); tau++) {
-        sum += X(k, t - tau) * hrf(tau);
+      // Convolution sum with bounds checking
+      int max_tau = std::min(h_len, t + 1);
+      for (int tau = 0; tau < max_tau; tau++) {
+        int idx = t - tau;
+        if (idx >= 0 && idx < T) {  // Explicit bounds check
+          sum += X(k, idx) * hrf(tau);
+        }
       }
       
       result(k, t) = sum;
@@ -153,6 +157,8 @@ List fista_tv_rcpp(const arma::mat& WtY,
   
   int K = X_init.n_rows;
   int T = X_init.n_cols;
+  (void)K; // Used in loop below
+  (void)T; // Used in loop below
   
   // Initialize variables
   arma::mat X = X_init;
@@ -227,8 +233,9 @@ List fista_tv_rcpp(const arma::mat& WtY,
       // Check convergence
       if (objective_values.size() > 5) {
         int n = objective_values.size();
+        const double STABILITY_EPSILON = 1e-8;  // Larger epsilon for numerical stability
         double recent_change = std::abs(objective_values[n-1] - objective_values[n-5]) / 
-                               (std::abs(objective_values[n-5]) + 1e-10);
+                               (std::abs(objective_values[n-5]) + STABILITY_EPSILON);
         
         if (recent_change < tol) {
           converged = true;

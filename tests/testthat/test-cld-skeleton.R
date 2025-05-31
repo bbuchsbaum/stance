@@ -1,17 +1,21 @@
+library(stance)
+
 test_that("ContinuousLinearDecoder class exists", {
   expect_true(exists("ContinuousLinearDecoder"))
   expect_s3_class(ContinuousLinearDecoder, "R6ClassGenerator")
 })
 
-test_that("CLD initialization placeholder works", {
-  # Should throw error for now (not implemented)
-  expect_error(
-    ContinuousLinearDecoder$new(
-      Y = matrix(1:100, 10, 10),
-      S_design = matrix(1:30, 3, 10)
-    ),
-    "not yet implemented"
+test_that("CLD initialization works", {
+  # CLD requires Y and S_design parameters
+  Y <- matrix(rnorm(100), 10, 10)
+  S_design <- matrix(rnorm(30), 3, 10)
+  
+  cld <- ContinuousLinearDecoder$new(
+    Y = Y,
+    S_design = S_design,
+    verbose = FALSE
   )
+  expect_s3_class(cld, "ContinuousLinearDecoder")
 })
 
 test_that("CLD has expected public methods", {
@@ -62,11 +66,18 @@ test_that("check_convergence works", {
   values1 <- c(100, 90, 80, 70, 60)
   expect_false(stance:::check_convergence(values1))
   
-  # Converged
-  values2 <- c(100, 50, 25, 24.9, 24.8, 24.79, 24.78)
-  expect_true(stance:::check_convergence(values2))
+  # Converged (very small relative change)
+  values2 <- c(100, 50, 25, 24.9, 24.85, 24.845, 24.844)
+  # The relative change between 24.9 and 24.844 is (24.9-24.844)/24.9 = 0.00225 > 1e-4
+  # So this should not converge with default tolerance
+  expect_false(stance:::check_convergence(values2))
+  
+  # Actually converged values
+  values3 <- c(100, 50, 25.0, 24.9999, 24.9998, 24.99975, 24.9997)
+  # Relative change is (25.0 - 24.9997)/25.0 = 0.000012 < 1e-4
+  expect_true(stance:::check_convergence(values3))
   
   # Too few values
-  values3 <- c(100, 90)
-  expect_false(stance:::check_convergence(values3))
+  values4 <- c(100, 90)
+  expect_false(stance:::check_convergence(values4))
 })

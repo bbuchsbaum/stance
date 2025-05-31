@@ -88,22 +88,12 @@ ContinuousLinearDecoder <- R6::R6Class(
       }
       
       # Learn W via GLM+SVD
-      tryCatch({
-        private$.learn_W_via_glm_svd(
-          Y_input = private$.Y,
-          S_design_input = private$.S_design,
-          hrf_kernel_input = private$.hrf,
-          rank_input = private$.rank
-        )
-      }, error = function(e) {
-        if (grepl("not yet implemented", e$message)) {
-          # Expected for now, set placeholder values
-          if (verbose) cat("Note: GLM+SVD learning pending implementation\n")
-          private$.W <- matrix(rnorm(V * private$.K), V, private$.K)
-        } else {
-          stop(e)
-        }
-      })
+      private$.learn_W_via_glm_svd(
+        Y_input = private$.Y,
+        S_design_input = private$.S_design,
+        hrf_kernel_input = private$.hrf,
+        rank_input = private$.rank
+      )
       
       # Pre-compute and cache WtY and WtW efficiently
       if (private$.use_low_rank || !is.null(private$.W)) {
@@ -147,7 +137,10 @@ ContinuousLinearDecoder <- R6::R6Class(
     #' @return Self (invisibly) for method chaining
     fit = function(max_iter = 100, tol = 1e-4, verbose = FALSE) {
       # Check if initialized
-      if (is.null(private$.W)) {
+      if (!private$.use_low_rank && is.null(private$.W)) {
+        stop("Model not initialized. Call $new() first.")
+      }
+      if (private$.use_low_rank && (is.null(private$.U_r) || is.null(private$.V_r))) {
         stop("Model not initialized. Call $new() first.")
       }
       
@@ -207,14 +200,15 @@ ContinuousLinearDecoder <- R6::R6Class(
       } else {  # neuroim format
         if (!is.null(private$.Y_info$space)) {
           # Convert to NeuroVol objects
+          W_matrix <- private$.get_W()
           restore_spatial_structure(
-            mat = private$.W,
+            mat = W_matrix,
             reference = private$.Y_info,
             output_type = "spatial"
           )
         } else {
           warning("No spatial information available - returning matrix")
-          return(private$.W)
+          return(private$.get_W())
         }
       }
     },
@@ -286,7 +280,7 @@ ContinuousLinearDecoder <- R6::R6Class(
     .U_r = NULL,            # V x rank low-rank spatial basis
     .S_r = NULL,            # rank singular values
     .V_r = NULL,            # K x rank low-rank loadings
-    .use_low_rank = FALSE   # Flag for low-rank representation
+    .use_low_rank = FALSE,  # Flag for low-rank representation
     
     # Algorithm parameters
     .L_fista = NULL,        # Lipschitz constant for FISTA
@@ -459,7 +453,10 @@ ContinuousLinearDecoder <- R6::R6Class(
     #' Run FISTA optimization
     .fista_tv = function(max_iter, tol, verbose) {
       # Check prerequisites
-      if (is.null(private$.WtY) || is.null(private$.W) || is.null(private$.hrf)) {
+      if (is.null(private$.WtY) || is.null(private$.hrf)) {
+        stop("Model not properly initialized. Run initialize() first.")
+      }
+      if (!private$.use_low_rank && is.null(private$.W)) {
         stop("Model not properly initialized. Run initialize() first.")
       }
       

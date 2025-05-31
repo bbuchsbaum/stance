@@ -374,10 +374,12 @@ compute_residual_sum_squares <- function(Y, S_gamma, U, V, H_v, hrf_basis) {
   # Compute expected residual sum of squares using matrix operations
   W <- U %*% t(V)
   Y_hat <- W %*% S_gamma
-  sum((Y - Y_hat)^2)
-
+  return(sum((Y - Y_hat)^2))
   
+  # Alternative implementation below (currently unused)
   rss <- 0
+  V_voxels <- nrow(Y)  # Number of voxels
+  K <- nrow(S_gamma)  # Number of states
   
   # Simplified computation - TODO full version would properly handle HRF convolution
   for (t in seq_len(T)) {

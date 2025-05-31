@@ -11,7 +11,7 @@ using namespace arma;
 
 // Forward declaration for transposed convolution helper
 arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf,
-                                  int n_threads = 0);
+                                  int n_threads);
 
 arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
                                               const arma::mat& WtW,
@@ -84,7 +84,8 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
     Grad_term = W.t() * Residual;
 
     // Apply transposed convolution with time-reversed HRF
-    arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel);
+    // Use automatic thread detection (0) for optimal parallelization
+    arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, 0);
     return -Grad_L2;
 
   } else {

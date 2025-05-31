@@ -49,7 +49,34 @@ validate_fmri_input <- function(Y, expected_dims = NULL, check_finite = TRUE, ve
   # Handle NeuroVec input
   if (inherits(Y, "NeuroVec")) {
     result$type <- "NeuroVec"
-    result$data <- as.matrix(Y)
+    
+    # For NeuroVec, we need to ensure proper matrix conversion
+    # Try different approaches to get the data as a matrix
+    if (inherits(Y, "DenseNeuroVec")) {
+      # For DenseNeuroVec, access the .Data slot directly
+      Y_data <- Y@.Data
+      if (length(dim(Y_data)) == 4) {
+        # Reshape 4D array to matrix (voxels x time)
+        spatial_dims <- dim(Y_data)[1:3]
+        time_dim <- dim(Y_data)[4]
+        Y_mat <- matrix(Y_data, nrow = prod(spatial_dims), ncol = time_dim)
+      } else {
+        # Fallback to as.matrix
+        Y_mat <- as.matrix(Y)
+      }
+    } else {
+      # For other NeuroVec types, use as.matrix
+      Y_mat <- as.matrix(Y)
+      # Ensure it's V x T (not 4D array)
+      if (length(dim(Y_mat)) > 2) {
+        # Flatten spatial dimensions
+        spatial_dims <- dim(Y_mat)[1:3]
+        time_dim <- dim(Y_mat)[4]
+        Y_mat <- matrix(Y_mat, nrow = prod(spatial_dims), ncol = time_dim)
+      }
+    }
+    
+    result$data <- Y_mat
     result$space <- neuroim2::space(Y)
     
     # Extract mask if it's a SparseNeuroVec
@@ -175,7 +202,9 @@ extract_data_matrix <- function(obj, flatten_space = TRUE,
   # Already a matrix
   } else if (is.matrix(obj)) {
     data <- obj
-    metadata$class <- "matrix"
+    if (preserve_attributes) {
+      metadata$class <- "matrix"
+    }
     
   } else {
     stop("Unsupported object type: ", paste(class(obj), collapse = ", "))
@@ -225,7 +254,7 @@ restore_spatial_structure <- function(mat, reference, output_type = c("temporal"
   if (!is.null(mask)) {
     expected_voxels <- sum(mask)
   } else {
-    space_dim <- try(neuroim2::dim(space_obj), silent = TRUE)
+    space_dim <- try(dim(space_obj), silent = TRUE)
     if (!inherits(space_dim, "try-error")) {
       if (length(space_dim) > 3) {
         expected_voxels <- prod(space_dim[1:3])
@@ -254,14 +283,27 @@ restore_spatial_structure <- function(mat, reference, output_type = c("temporal"
     }
     
   } else {  # spatial
-    # Spatial maps (V x K)
+    # Spatial maps (V x K) - need 3D space for NeuroVol
+    # Create 3D space from 4D space if needed
+    if (length(dim(space_obj)) == 4) {
+      # Create 3D space for spatial maps
+      space_3d <- neuroim2::NeuroSpace(
+        dim = dim(space_obj)[1:3],
+        spacing = neuroim2::spacing(space_obj)[1:3],
+        origin = neuroim2::origin(space_obj)[1:3],
+        axes = neuroim2::axes(space_obj)
+      )
+    } else {
+      space_3d <- space_obj
+    }
+    
     if (ncol(mat) == 1) {
       # Single map
-      result <- neuroim2::NeuroVol(mat[, 1], space_obj)
+      result <- neuroim2::NeuroVol(mat[, 1], space_3d)
     } else {
       # Multiple maps
       result <- lapply(seq_len(ncol(mat)), function(k) {
-        neuroim2::NeuroVol(mat[, k], space_obj)
+        neuroim2::NeuroVol(mat[, k], space_3d)
       })
     }
   }

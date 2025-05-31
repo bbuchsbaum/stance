@@ -7,7 +7,7 @@ test_that("create_chain_laplacian returns valid Laplacian", {
   expect_equal(dim(L), c(5, 5))
   expect_true(Matrix::isSymmetric(L))
   expect_equal(Matrix::rowSums(L), rep(0, 5))
-  expect_equal(diag(L), c(1, rep(2, 3), 1))
+  expect_equal(as.vector(Matrix::diag(L)), c(1, rep(2, 3), 1))
 })
 
 test_that("create_gmrf_laplacian_neuroim2 produces correct structure", {
@@ -18,5 +18,5 @@ test_that("create_gmrf_laplacian_neuroim2 produces correct structure", {
   expect_equal(dim(L), c(4, 4))
   expect_true(Matrix::isSymmetric(L))
   expect_equal(Matrix::rowSums(L), rep(0, 4))
-  expect_equal(diag(L), rep(2, 4))
+  expect_equal(as.vector(Matrix::diag(L)), rep(2, 4))
 })
