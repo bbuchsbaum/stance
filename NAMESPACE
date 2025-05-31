@@ -8,6 +8,10 @@ export(qc_report)
 # Data simulation and utilities
 export(simulate_cbd_data)
 export(validate_bids_run)
+export(simulate_fmri_data)
+export(validate_fmri_input)
+export(extract_data_matrix)
+export(restore_spatial_structure)
 
 # Visualization functions
 export(plot_spatial_maps)
@@ -17,6 +21,7 @@ export(plot_state_sequence)
 # HRF utilities extending fmrireg
 export(create_hrf_basis_neuroim2)
 export(convolve_with_hrf)
+export(setup_hrf_kernel)
 
 # Data structure utilities
 export(as_neurovol)
