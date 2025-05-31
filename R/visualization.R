@@ -212,11 +212,13 @@ plot_convergence <- function(values, type = c("objective", "elbo"),
 #' @param TR Repetition time in seconds
 #' @param col Colors for HRFs
 #' @param main Plot title
+#' @param hrf_var Optional variance of HRF estimates (same shape as `hrf`)
+#'   used to draw 95\% confidence bands
 #' @param ... Additional plotting arguments
-#' 
-#' @return NULL (plot displayed)
+#'
+#' @return A ggplot object when \code{hrf_var} is provided, otherwise \code{NULL}
 #' @export
-plot_hrf <- function(hrf, TR = 2, col = NULL, main = "HRF", ...) {
+plot_hrf <- function(hrf, TR = 2, col = NULL, main = "HRF", hrf_var = NULL, ...) {
   if (is.vector(hrf)) {
     hrf <- matrix(hrf, ncol = 1)
   }
@@ -229,15 +231,38 @@ plot_hrf <- function(hrf, TR = 2, col = NULL, main = "HRF", ...) {
   if (is.null(col)) {
     col <- if (n_hrf == 1) "black" else rainbow(n_hrf)
   }
-  
+
+  if (!is.null(hrf_var)) {
+    if (is.vector(hrf_var)) {
+      hrf_var <- matrix(hrf_var, ncol = n_hrf)
+    }
+    df_list <- lapply(seq_len(n_hrf), function(i) {
+      data.frame(
+        time = time_axis,
+        mean = hrf[, i],
+        lower = hrf[, i] - 1.96 * sqrt(hrf_var[, i]),
+        upper = hrf[, i] + 1.96 * sqrt(hrf_var[, i]),
+        id = paste0("HRF", i)
+      )
+    })
+    df <- do.call(rbind, df_list)
+    p <- ggplot2::ggplot(df, ggplot2::aes(x = time, y = mean, colour = id, fill = id)) +
+      ggplot2::geom_ribbon(ggplot2::aes(ymin = lower, ymax = upper), alpha = 0.2, colour = NA) +
+      ggplot2::geom_line() +
+      ggplot2::labs(x = "Time (s)", y = "Response", title = main) +
+      ggplot2::theme_bw()
+    print(p)
+    return(invisible(p))
+  }
+
   matplot(time_axis, hrf, type = "l", lty = 1, col = col,
           xlab = "Time (s)", ylab = "Response", main = main, ...)
-  
+
   if (n_hrf > 1) {
     legend("topright", legend = paste("HRF", 1:n_hrf),
            col = col, lty = 1, bty = "n")
   }
-  
+
   invisible(NULL)
 }
 
