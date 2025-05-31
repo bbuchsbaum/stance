@@ -403,7 +403,36 @@ ContinuousBayesianDecoder <- R6::R6Class(
 
     # Compute log likelihoods for each state/time
     .compute_log_likelihoods = function() {
-      stop("Not implemented")
+      Y_proj <- private$.Y_proj
+      Vmat <- private$.V
+      hrf <- private$.hrf_kernel
+      sigma2 <- private$.sigma2
+
+      r <- private$.r
+      K <- private$.K
+      T_len <- private$.T
+
+      if (is.null(Y_proj) || is.null(Vmat) || is.null(hrf)) {
+        stop("Model parameters not initialized")
+      }
+
+      sigma2 <- max(sigma2, 1e-8)
+      const_term <- -0.5 * r * log(2 * pi * sigma2)
+
+      # Impulse responses for each time point using shared HRF utilities
+      impulses <- diag(T_len)
+      conv_mat <- convolve_with_hrf(impulses, hrf)
+      h_at_t <- diag(conv_mat)
+
+      log_lik <- matrix(0, K, T_len)
+
+      for (k in seq_len(K)) {
+        mu_proj_k <- outer(Vmat[k, ], h_at_t)
+        diff <- Y_proj - mu_proj_k
+        log_lik[k, ] <- const_term - 0.5 * colSums(diff^2) / sigma2
+      }
+
+      log_lik
     },
 
     # Forward-backward algorithm wrapper
