@@ -1,6 +1,10 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 using namespace Rcpp;
 using namespace arma;
 
@@ -43,7 +47,6 @@ arma::vec prox_tv_condat_1d(const arma::vec& x, double lambda) {
   }
   
   // Condat's algorithm implementation
-  arma::vec y = x;
   arma::vec z(n);
   
   // Working variables
@@ -106,15 +109,18 @@ arma::vec prox_tv_condat_1d(const arma::vec& x, double lambda) {
 //' 
 //' Applies the 1D TV proximal operator to each row of a matrix.
 //' This is used in FISTA to enforce temporal smoothness on state activations.
+//' Supports OpenMP parallelization when available.
 //' 
 //' @param X Input matrix (K x T)
 //' @param lambda_tv TV regularization parameter
+//' @param n_threads Number of threads to use (0 = auto)
 //' 
 //' @return Matrix with TV-denoised rows
 //' 
 //' @export
 // [[Rcpp::export]]
-arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv) {
+arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv,
+                              int n_threads = 0) {
   // Input validation
   if (X.is_empty()) {
     stop("Input matrix cannot be empty");
@@ -125,6 +131,14 @@ arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv) {
   
   int K = X.n_rows;
   int T = X.n_cols;
+
+#ifdef _OPENMP
+  int max_threads = omp_get_max_threads();
+  if (n_threads <= 0 || n_threads > max_threads) {
+    n_threads = max_threads;
+  }
+  omp_set_num_threads(n_threads);
+#endif
   
   // Check for numerical issues
   if (X.has_nan() || X.has_inf()) {
@@ -134,6 +148,9 @@ arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv) {
   arma::mat result(K, T);
   
   // Apply TV prox to each row
+#ifdef _OPENMP
+  #pragma omp parallel for
+#endif
   for (int k = 0; k < K; k++) {
     result.row(k) = prox_tv_condat_1d(X.row(k).t(), lambda_tv).t();
   }
@@ -167,15 +184,7 @@ double compute_tv_rcpp(const arma::mat& X) {
     stop("Input matrix contains NaN or Inf values");
   }
   
-  double tv = 0.0;
-  
-  for (int k = 0; k < X.n_rows; k++) {
-    for (int t = 1; t < X.n_cols; t++) {
-      tv += std::abs(X(k, t) - X(k, t-1));
-    }
-  }
-  
-  return tv;
+  return arma::accu(arma::abs(arma::diff(X, 1, 1)));
 }
 
 //' Alternative TV Proximal Operator using Dual Method
@@ -192,11 +201,33 @@ double compute_tv_rcpp(const arma::mat& X) {
 //' 
 //' @keywords internal
 // [[Rcpp::export]]
-arma::vec prox_tv_dual(const arma::vec& x, double lambda, 
+arma::vec prox_tv_dual(const arma::vec& x, double lambda,
                        int max_iter = 100, double tol = 1e-8) {
+  if (x.is_empty()) {
+    stop("Input vector cannot be empty");
+  }
+
   int n = x.n_elem;
+
   
-  if (n <= 1 || lambda <= 0) {
+  if (n <= 2 || lambda <= 0) {
+
+
+  if (x.has_nan() || x.has_inf()) {
+    stop("Input vector contains NaN or Inf values");
+  }
+  if (!std::isfinite(lambda) || lambda < 0) {
+    stop("lambda must be non-negative and finite");
+  }
+  if (max_iter <= 0) {
+    stop("max_iter must be positive");
+  }
+  if (!std::isfinite(tol) || tol <= 0) {
+    stop("tol must be positive and finite");
+  }
+
+  if (n <= 1 || lambda == 0) {
+
     return x;
   }
   

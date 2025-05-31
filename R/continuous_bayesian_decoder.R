@@ -427,4 +427,4 @@ as.list.ContinuousBayesianDecoder <- function(x, ...) {
     hrf_estimates = x$get_hrf_estimates(),
     convergence = x$get_convergence()
   )
-} 
+}

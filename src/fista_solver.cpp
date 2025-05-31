@@ -1,34 +1,51 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 using namespace Rcpp;
 using namespace arma;
 
 // Forward declarations of functions from other files
-arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY, 
+arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
                                       const arma::mat& W,
                                       const arma::mat& H_star_X,
                                       const arma::vec& hrf_kernel,
-                                      bool precomputed_WtY);
+                                      bool precomputed_WtY,
+                                      const arma::mat& WtW_precomp = arma::mat());
 
-arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv);
+arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv,
+                              int n_threads = 0);
 
-arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf);
+arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
+                                              const arma::mat& WtW,
+                                              const arma::mat& H_star_X,
+                                              const arma::vec& hrf_kernel);
+
+
+
+arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf,
+                             int n_threads = 0);
 
 double compute_tv_rcpp(const arma::mat& X);
 
 //' Fast Row-wise Convolution
 //' 
 //' Performs convolution of each row with the HRF kernel.
+//' Supports OpenMP parallelization when available.
 //' 
 //' @param X Matrix with signals in rows (K x T)
 //' @param hrf HRF kernel vector
+//' @param n_threads Number of threads to use (0 = auto)
 //' 
 //' @return Convolved matrix (K x T)
 //' 
 //' @keywords internal
 // [[Rcpp::export]]
-arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf) {
+arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf,
+                             int n_threads = 0) {
   // Input validation
   if (X.is_empty() || hrf.is_empty()) {
     stop("Input matrix or HRF kernel cannot be empty");
@@ -37,6 +54,14 @@ arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf) {
   int K = X.n_rows;
   int T = X.n_cols;
   int h_len = hrf.n_elem;
+
+#ifdef _OPENMP
+  int max_threads = omp_get_max_threads();
+  if (n_threads <= 0 || n_threads > max_threads) {
+    n_threads = max_threads;
+  }
+  omp_set_num_threads(n_threads);
+#endif
   
   // Check for potential issues
   if (h_len > T) {
@@ -46,6 +71,9 @@ arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf) {
   arma::mat result(K, T, fill::zeros);
   
   // Perform convolution for each row
+#ifdef _OPENMP
+  #pragma omp parallel for
+#endif
   for (int k = 0; k < K; k++) {
     for (int t = 0; t < T; t++) {
       double sum = 0.0;
@@ -160,15 +188,17 @@ List fista_tv_rcpp(const arma::mat& WtY,
     t_old = t;
     
     // Compute gradient at Z
-    arma::mat H_star_Z = convolve_rows_rcpp(Z, hrf_kernel);
-    arma::mat gradient = compute_gradient_fista_rcpp(WtY, W, H_star_Z, 
-                                                     hrf_kernel, true);
+
+    arma::mat H_star_Z = convolve_rows_rcpp(Z, hrf_kernel, 0);
+    arma::mat gradient = compute_gradient_fista_rcpp(WtY, W, H_star_Z,
+                                                     hrf_kernel, true, WtW);
+
     
     // Gradient step
     arma::mat X_tilde = Z - step_size * gradient;
     
     // Proximal step (TV denoising)
-    X = prox_tv_condat_rcpp(X_tilde, step_size * lambda_tv);
+    X = prox_tv_condat_rcpp(X_tilde, step_size * lambda_tv, 0);
     
     // Update momentum parameter
     t = (1.0 + std::sqrt(1.0 + 4.0 * t_old * t_old)) / 2.0;
@@ -180,7 +210,7 @@ List fista_tv_rcpp(const arma::mat& WtY,
     // Compute objective value (optional, for convergence check)
     if (iter % 10 == 0 || iter < 10) {
       // Compute residual
-      arma::mat H_star_X = convolve_rows_rcpp(X, hrf_kernel);
+      arma::mat H_star_X = convolve_rows_rcpp(X, hrf_kernel, 0);
       arma::mat residual = WtY - WtW * H_star_X;
       double reconstruction_error = 0.5 * accu(square(residual));
       
@@ -263,7 +293,7 @@ double compute_objective_rcpp(const arma::mat& Y,
   }
   
   // Convolve states with HRF
-  arma::mat HX = convolve_rows_rcpp(X, hrf);
+  arma::mat HX = convolve_rows_rcpp(X, hrf, 0);
   
   // Reconstruction error
   arma::mat residual = Y - W * HX;

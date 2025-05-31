@@ -33,11 +33,20 @@ test_that("validate_fmri_input works with matrix input", {
 test_that("validate_fmri_input handles data.frame input", {
   # Create test data.frame
   Y_df <- as.data.frame(matrix(rnorm(100 * 50), nrow = 100, ncol = 50))
-  
+
   result <- validate_fmri_input(Y_df)
   expect_equal(result$type, "data.frame")
   expect_true(is.matrix(result$data))
+  expect_true(is.numeric(result$data))
   expect_equal(dim(result$data), c(100, 50))
+})
+
+test_that("validate_fmri_input errors with non-numeric data.frame", {
+  Y_bad <- data.frame(a = rnorm(10), b = letters[1:10])
+  expect_error(
+    validate_fmri_input(Y_bad),
+    "non-numeric columns"
+  )
 })
 
 test_that("extract_data_matrix handles different input types", {
@@ -46,7 +55,12 @@ test_that("extract_data_matrix handles different input types", {
   result <- extract_data_matrix(mat)
   expect_equal(result$data, mat)
   expect_equal(result$metadata$class, "matrix")
-  
+
+  # With force_matrix flag (should be identical for matrix input)
+  result_force <- extract_data_matrix(mat, force_matrix = TRUE)
+  expect_equal(result_force$data, mat)
+  expect_equal(result_force$metadata$class, "matrix")
+
   # Test preserve_attributes = FALSE
   result2 <- extract_data_matrix(mat, preserve_attributes = FALSE)
   expect_equal(length(result2$metadata), 0)
@@ -123,3 +137,84 @@ test_that("create_output_structure works for both algorithms", {
   expect_true(!is.null(cbd_out$uncertainty))
   expect_true(!is.null(cbd_out$posterior_params))
 })
+
+
+
+test_that("create_output_structure validates inputs", {
+  spatial_maps <- matrix(rnorm(100 * 3), nrow = 100, ncol = 3)
+  temporal_ok <- matrix(rnorm(3 * 50), nrow = 3, ncol = 50)
+
+  temporal_bad_dim <- matrix(rnorm(2 * 50), nrow = 2, ncol = 50)
+  expect_error(
+    create_output_structure(spatial_maps, temporal_bad_dim, list(), "CLD"),
+    "Number of rows in temporal_activations"
+  )
+
+  spatial_bad_type <- matrix("a", nrow = 100, ncol = 3)
+  expect_error(
+    create_output_structure(spatial_bad_type, temporal_ok, list(), "CLD"),
+    "spatial_maps must be a numeric matrix"
+  )
+
+  temporal_bad_type <- matrix("a", nrow = 3, ncol = 50)
+  expect_error(
+    create_output_structure(spatial_maps, temporal_bad_type, list(), "CLD"),
+    "temporal_activations must be a numeric matrix"
+   )
+ })
+})
+
+test_that("restore_spatial_structure sets probabilistic attribute", {
+  skip_if_not_installed("neuroim2")
+
+  space <- neuroim2::NeuroSpace(dim = c(2, 2, 2), spacing = c(1, 1, 1))
+  ref <- neuroim2::NeuroVol(rnorm(8), space)
+
+  # Single spatial map
+  mat_single <- matrix(rnorm(8), nrow = 8, ncol = 1)
+  res_single <- restore_spatial_structure(mat_single, ref,
+                                          output_type = "spatial",
+                                          probabilistic = TRUE)
+  expect_true(!is.null(attr(res_single, "probabilistic")))
+
+  # Multiple spatial maps
+  mat_multi <- matrix(rnorm(16), nrow = 8, ncol = 2)
+  res_multi <- restore_spatial_structure(mat_multi, ref,
+                                         output_type = "spatial",
+                                         probabilistic = TRUE)
+  if (is.list(res_multi)) {
+    expect_true(!is.null(attr(res_multi, "probabilistic")))
+    expect_true(all(vapply(res_multi, function(x)
+      !is.null(attr(x, "probabilistic")), logical(1))))
+  } else {
+    expect_true(!is.null(attr(res_multi, "probabilistic")))
+  }
+})
+
+
+
+test_that("restore_spatial_structure errors on dimension mismatch", {
+  skip_if_not_installed("neuroim2")
+
+  # Reference with space only
+  space_obj <- neuroim2::NeuroSpace(dim = c(2, 2, 2, 5))
+  mat_bad <- matrix(rnorm(10 * 5), nrow = 10, ncol = 5)
+  ref_space <- list(space = space_obj)
+
+  expect_error(
+    restore_spatial_structure(mat_bad, ref_space, output_type = "temporal"),
+    "10 rows.*8 voxels"
+  )
+
+  # Reference with mask
+  mask <- rep(TRUE, 5)
+  ref_mask <- list(space = space_obj, mask = mask)
+
+  expect_error(
+    restore_spatial_structure(mat_bad, ref_mask, output_type = "temporal"),
+    "10 rows.*5 voxels"
+
+  )
+})
+
+
