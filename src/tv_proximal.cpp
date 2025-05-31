@@ -191,6 +191,10 @@ arma::vec prox_tv_dual(const arma::vec& x, double lambda,
 
   int n = x.n_elem;
 
+  
+  if (n <= 2 || lambda <= 0) {
+
+
   if (x.has_nan() || x.has_inf()) {
     stop("Input vector contains NaN or Inf values");
   }
@@ -205,6 +209,7 @@ arma::vec prox_tv_dual(const arma::vec& x, double lambda,
   }
 
   if (n <= 1 || lambda == 0) {
+
     return x;
   }
   
