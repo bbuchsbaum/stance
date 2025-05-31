@@ -582,8 +582,8 @@ ContinuousBayesianDecoder <- R6::R6Class(
 
       log_lik <- matrix(0, K, T_len)
 
-      for (k in seq_len(K)) {
-        mu_proj_k <- outer(Vmat[k, ], h_at_t)
+      for (k in seq_len(K)) { # PERF: state loop dominates likelihood time
+        mu_proj_k <- outer(Vmat[k, ], h_at_t) # PERF: outer product heavy
         diff <- Y_proj - mu_proj_k
         log_lik[k, ] <- const_term - 0.5 * colSums(diff^2) / sigma2
       }
@@ -616,7 +616,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
       alpha[, 1] <- alpha[, 1] * c_scale[1]
 
       if (T_len > 1) {
-        for (t in 2:T_len) {
+        for (t in 2:T_len) { # PERF: forward loop over time
           alpha[, t] <- (alpha[, t - 1] %*% Pi) * exp(log_lik[, t])
           c_scale[t] <- 1 / sum(alpha[, t])
           alpha[, t] <- alpha[, t] * c_scale[t]
@@ -628,7 +628,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
       # Backward pass
       beta[, T_len] <- 1
       if (T_len > 1) {
-        for (t in (T_len - 1):1) {
+        for (t in (T_len - 1):1) { # PERF: backward loop over time
           beta[, t] <- Pi %*% (beta[, t + 1] * exp(log_lik[, t + 1]))
           beta[, t] <- beta[, t] * c_scale[t + 1]
         }
@@ -638,7 +638,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
 
       xi <- array(0, c(K, K, max(T_len - 1, 1)))
       if (T_len > 1) {
-        for (t in 1:(T_len - 1)) {
+        for (t in 1:(T_len - 1)) { # PERF: xi computation loop
           temp <- (alpha[, t] %*% t(beta[, t + 1] * exp(log_lik[, t + 1]))) * Pi
           xi[, , t] <- temp / sum(temp)
         }
