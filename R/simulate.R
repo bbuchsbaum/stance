@@ -24,6 +24,7 @@ NULL
 #' @param spatial_smooth Logical, add spatial smoothness to patterns
 #' @param temporal_smooth Logical, add temporal smoothness (for CLD)
 #' @param transition_matrix K x K transition matrix (for CBD), if NULL uses random
+#' @param pi0 Optional length-K vector of initial state probabilities (CBD)
 #' @param state_design K x T design matrix (for supervised mode), if NULL generates states
 #' @param return_neuroim Logical, return neuroimaging objects instead of matrices
 #' @param dims Spatial dimensions c(x, y, z) for neuroimaging output
@@ -38,6 +39,8 @@ NULL
 #'   \item{X}{K x T matrix of convolved states}
 #'   \item{hrf}{HRF kernel used}
 #'   \item{noise}{V x T matrix of noise added}
+#'   \item{Pi}{K x K transition matrix used for state simulation (CBD)}
+#'   \item{pi0}{Length-K vector of initial state probabilities (CBD)}
 #'   \item{params}{List of simulation parameters}
 #' 
 #' @export
@@ -61,6 +64,7 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
                                spatial_smooth = TRUE,
                                temporal_smooth = TRUE,
                                transition_matrix = NULL,
+                               pi0 = NULL,
                                state_design = NULL,
                                return_neuroim = FALSE,
                                dims = NULL,
@@ -121,7 +125,10 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
     S <- state_design
   } else if (algorithm == "CBD") {
     # Generate Markov chain states
-    S <- generate_markov_states(K, T, transition_matrix)
+    markov <- generate_markov_states(K, T, transition_matrix, pi0)
+    S <- markov$S
+    transition_matrix <- markov$Pi
+    pi0 <- markov$pi0
   } else {  # CLD
     # Generate continuous states with temporal structure
     S <- generate_continuous_states(K, T, smooth = temporal_smooth)
@@ -162,6 +169,8 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
     X = X,
     hrf = hrf,
     noise = noise_scaled,
+    Pi = if (algorithm == "CBD") transition_matrix else NULL,
+    pi0 = if (algorithm == "CBD") pi0 else NULL,
     params = list(
       V = V, T = T, K = K, rank = rank,
       algorithm = algorithm,
@@ -169,7 +178,9 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
       TR = TR,
       snr = snr,
       spatial_smooth = spatial_smooth,
-      temporal_smooth = temporal_smooth
+      temporal_smooth = temporal_smooth,
+      Pi = if (algorithm == "CBD") transition_matrix else NULL,
+      pi0 = if (algorithm == "CBD") pi0 else NULL
     )
   )
   
@@ -237,10 +248,12 @@ generate_spatial_patterns <- function(V, K, rank, smooth = TRUE, dims = NULL) {
 #' @param K Number of states
 #' @param T Number of time points
 #' @param transition_matrix K x K transition matrix, if NULL generates random
-#' 
-#' @return K x T one-hot encoded state matrix
+#' @param pi0 Optional length-K vector of initial state probabilities
+#'
+#' @return List with elements \code{S} (K x T one-hot matrix), \code{Pi}
+#'   (transition matrix), and \code{pi0} (initial probabilities)
 #' @keywords internal
-generate_markov_states <- function(K, T, transition_matrix = NULL) {
+generate_markov_states <- function(K, T, transition_matrix = NULL, pi0 = NULL) {
   # Generate transition matrix if not provided
   if (is.null(transition_matrix)) {
     # Create transition matrix with preference for self-transitions
@@ -249,25 +262,35 @@ generate_markov_states <- function(K, T, transition_matrix = NULL) {
     # Normalize rows
     transition_matrix <- trans_raw / rowSums(trans_raw)
   }
-  
+
   # Initial state probabilities
-  pi0 <- rep(1/K, K)
-  
+  if (is.null(pi0)) {
+    pi0 <- rep(1/K, K)
+  } else {
+    if (length(pi0) != K) {
+      stop("pi0 must have length K")
+    }
+    if (any(pi0 < 0)) {
+      stop("pi0 must be non-negative")
+    }
+    pi0 <- pi0 / sum(pi0)
+  }
+
   # Generate state sequence
   states <- integer(T)
   states[1] <- sample(1:K, 1, prob = pi0)
-  
+
   for (t in 2:T) {
     states[t] <- sample(1:K, 1, prob = transition_matrix[states[t-1], ])
   }
-  
+
   # Convert to one-hot encoding
   S <- matrix(0, K, T)
   for (t in 1:T) {
     S[states[t], t] <- 1
   }
-  
-  S
+
+  list(S = S, Pi = transition_matrix, pi0 = pi0)
 }
 
 #' Generate Continuous States
@@ -573,7 +596,7 @@ simulate_multi_subject <- function(n_subjects, V, T, K,
     
     # Subject-specific states (same structure, different timing)
     S_subj <- if (group_sim$params$algorithm == "CBD") {
-      generate_markov_states(K, T)
+      generate_markov_states(K, T, group_sim$params$Pi, group_sim$params$pi0)$S
     } else {
       generate_continuous_states(K, T, smooth = TRUE)
     }
