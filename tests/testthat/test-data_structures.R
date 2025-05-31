@@ -46,7 +46,12 @@ test_that("extract_data_matrix handles different input types", {
   result <- extract_data_matrix(mat)
   expect_equal(result$data, mat)
   expect_equal(result$metadata$class, "matrix")
-  
+
+  # With force_matrix flag (should be identical for matrix input)
+  result_force <- extract_data_matrix(mat, force_matrix = TRUE)
+  expect_equal(result_force$data, mat)
+  expect_equal(result_force$metadata$class, "matrix")
+
   # Test preserve_attributes = FALSE
   result2 <- extract_data_matrix(mat, preserve_attributes = FALSE)
   expect_equal(length(result2$metadata), 0)

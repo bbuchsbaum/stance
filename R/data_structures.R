@@ -117,13 +117,18 @@ validate_fmri_input <- function(Y, expected_dims = NULL, check_finite = TRUE, ve
 #' @param obj NeuroVec, NeuroVol, or list of neuroimaging objects
 #' @param flatten_space Logical, whether to flatten spatial dimensions (default TRUE)
 #' @param preserve_attributes Logical, whether to preserve object attributes (default TRUE)
+#' @param force_matrix Logical, if TRUE always return a matrix by flattening
+#'   3-D data (default FALSE)
 #' 
 #' @return A list with components:
-#'   \item{data}{Numeric matrix}
+#'   \item{data}{Numeric matrix. If \code{flatten_space = FALSE} and
+#'     \code{force_matrix = FALSE} for 3-D input, a 3-D array is returned}
 #'   \item{metadata}{List of preserved metadata for reconstruction}
 #' 
 #' @export
-extract_data_matrix <- function(obj, flatten_space = TRUE, preserve_attributes = TRUE) {
+extract_data_matrix <- function(obj, flatten_space = TRUE,
+                                preserve_attributes = TRUE,
+                                force_matrix = FALSE) {
   metadata <- list()
   
   # NeuroVec (4D: space x time)
@@ -138,7 +143,7 @@ extract_data_matrix <- function(obj, flatten_space = TRUE, preserve_attributes =
     
   # NeuroVol (3D: space only)
   } else if (inherits(obj, "NeuroVol")) {
-    if (flatten_space) {
+    if (flatten_space || force_matrix) {
       data <- matrix(as.vector(obj), ncol = 1)
       metadata$original_dim <- dim(obj)
     } else {
@@ -168,7 +173,12 @@ extract_data_matrix <- function(obj, flatten_space = TRUE, preserve_attributes =
   } else {
     stop("Unsupported object type: ", paste(class(obj), collapse = ", "))
   }
-  
+
+  if (force_matrix && !is.matrix(data)) {
+    metadata$original_dim <- dim(data)
+    data <- matrix(as.vector(data), ncol = 1)
+  }
+
   list(data = data, metadata = metadata)
 }
 
