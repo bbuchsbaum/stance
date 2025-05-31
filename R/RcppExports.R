@@ -210,6 +210,20 @@ compute_log_likelihoods_rcpp <- function(Y_proj, Vmat, hrf_kernel, sigma2) {
     .Call(`_stance_compute_log_likelihoods_rcpp`, Y_proj, Vmat, hrf_kernel, sigma2)
 }
 
+#' Forward Algorithm (Rcpp)
+#'
+#' Computes scaled forward probabilities for an HMM.
+#'
+#' @param log_lik Matrix of log-likelihoods (K x T)
+#' @param Pi      Transition matrix (K x K)
+#' @param pi0     Initial distribution (length K)
+#'
+#' @return List with `alpha`, `log_likelihood`, and scaling vector `c`.
+#' @keywords internal
+forward_pass_rcpp <- function(log_lik, Pi, pi0) {
+    .Call(`_stance_forward_pass_rcpp`, log_lik, Pi, pi0)
+}
+
 #' Parallel Voxel-wise GLM Fitting
 #' 
 #' Fits GLMs for multiple voxels in parallel using OpenMP.
