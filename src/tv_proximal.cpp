@@ -191,11 +191,28 @@ double compute_tv_rcpp(const arma::mat& X) {
 //' 
 //' @keywords internal
 // [[Rcpp::export]]
-arma::vec prox_tv_dual(const arma::vec& x, double lambda, 
+arma::vec prox_tv_dual(const arma::vec& x, double lambda,
                        int max_iter = 100, double tol = 1e-8) {
+  if (x.is_empty()) {
+    stop("Input vector cannot be empty");
+  }
+
   int n = x.n_elem;
-  
-  if (n <= 1 || lambda <= 0) {
+
+  if (x.has_nan() || x.has_inf()) {
+    stop("Input vector contains NaN or Inf values");
+  }
+  if (!std::isfinite(lambda) || lambda < 0) {
+    stop("lambda must be non-negative and finite");
+  }
+  if (max_iter <= 0) {
+    stop("max_iter must be positive");
+  }
+  if (!std::isfinite(tol) || tol <= 0) {
+    stop("tol must be positive and finite");
+  }
+
+  if (n <= 1 || lambda == 0) {
     return x;
   }
   
