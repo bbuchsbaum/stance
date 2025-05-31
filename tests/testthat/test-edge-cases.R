@@ -135,10 +135,11 @@ test_that("Simulation handles extreme parameters", {
   
   # Zero SNR (pure noise)
   sim_zero_snr <- simulate_fmri_data(V = 100, T = 50, K = 3, snr = 0)
-  # Signal should be dominated by noise
+  # Signal should be dominated by noise and finite
   signal_var <- var(as.vector(sim_zero_snr$W %*% sim_zero_snr$X))
   noise_var <- var(as.vector(sim_zero_snr$noise))
   expect_true(noise_var > signal_var * 10)  # Noise much larger
+  expect_true(all(is.finite(sim_zero_snr$Y)))
 })
 
 test_that("Memory efficiency for large problems", {
