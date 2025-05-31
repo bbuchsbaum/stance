@@ -2,6 +2,11 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::plugins(cpp11)]]
 
+// This Rcpp routine initialises voxel-wise HRF coefficients using
+// batched least squares.  It is typically called during model
+// initialisation with HRF bases generated via \pkg{fmrireg} and works
+// on matrices extracted from `neuroim2` objects.
+
 using namespace Rcpp;
 using namespace arma;
 
@@ -10,7 +15,9 @@ using namespace arma;
 //' Estimates HRF coefficients for each voxel using batched least squares.
 //' The design matrix cross-product is solved with `solve_sympd` when
 //' possible and falls back to a general solver with ridge regularisation
-//' if the system is not positive definite.
+//' if the system is not positive definite.  Bases are typically
+//' created with `create_hrf_basis_canonical()` or related wrappers
+//' around the \pkg{fmrireg} HRF library.
 //'
 //' @param Y Data matrix (V x T)
 //' @param hrf_basis HRF basis matrix (T x L)
