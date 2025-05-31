@@ -228,8 +228,16 @@ restore_spatial_structure <- function(mat, reference, output_type = c("temporal"
   }
   
   # Add uncertainty information if probabilistic
-  if (probabilistic && !is.list(result)) {
-    attr(result, "probabilistic") <- TRUE
+  if (probabilistic) {
+    if (is.list(result)) {
+      result <- lapply(result, function(elem) {
+        attr(elem, "probabilistic") <- TRUE
+        elem
+      })
+      attr(result, "probabilistic") <- TRUE
+    } else {
+      attr(result, "probabilistic") <- TRUE
+    }
   }
   
   result
