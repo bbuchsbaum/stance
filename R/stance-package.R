@@ -40,4 +40,4 @@
 NULL
 
 # Suppress R CMD check notes for global variables used in data.table/dplyr operations
-utils::globalVariables(c(".", "time", "voxel", "state", "value", "iteration", "elbo")) 
+utils::globalVariables(c(".", "time", "voxel", "state", "value", "iteration", "elbo"))

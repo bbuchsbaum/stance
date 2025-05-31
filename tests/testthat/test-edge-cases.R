@@ -77,6 +77,10 @@ test_that("HRF utilities handle edge cases", {
   # Zero HRF
   hrf_zero <- rep(0, 16)
   expect_error(setup_hrf_kernel(hrf_zero), "is all zeros")
+
+  # Non-finite HRF
+  hrf_na <- c(0.2, NA, 0.3)
+  expect_error(setup_hrf_kernel(hrf_na), "non-finite values")
   
   # Single point HRF
   hrf_single <- 1
@@ -135,10 +139,11 @@ test_that("Simulation handles extreme parameters", {
   
   # Zero SNR (pure noise)
   sim_zero_snr <- simulate_fmri_data(V = 100, T = 50, K = 3, snr = 0)
-  # Signal should be dominated by noise
+  # Signal should be dominated by noise and finite
   signal_var <- var(as.vector(sim_zero_snr$W %*% sim_zero_snr$X))
   noise_var <- var(as.vector(sim_zero_snr$noise))
   expect_true(noise_var > signal_var * 10)  # Noise much larger
+  expect_true(all(is.finite(sim_zero_snr$Y)))
 })
 
 test_that("Memory efficiency for large problems", {

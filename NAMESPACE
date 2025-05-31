@@ -12,13 +12,15 @@ export(simulate_fmri_data)
 export(validate_fmri_input)
 export(extract_data_matrix)
 export(restore_spatial_structure)
+
 export(create_gmrf_laplacian_neuroim2)
 export(create_chain_laplacian)
 
+export(generate_event_design)
+export(simulate_multi_subject)
+
 # Visualization functions
 export(plot_spatial_maps)
-export(plot_hrf_estimates)
-export(plot_state_sequence)
 
 # HRF utilities extending fmrireg
 export(create_hrf_basis_neuroim2)
@@ -28,6 +30,7 @@ export(setup_hrf_kernel)
 # Data structure utilities
 export(as_neurovol)
 export(as_neurovec)
+export("%||%")
 
 # S3 methods
 S3method(plot, ContinuousBayesianDecoder)
@@ -40,7 +43,7 @@ import(R6)
 import(neuroim2)
 import(fmrireg)
 importFrom(Rcpp, sourceCpp)
-importFrom(Matrix, sparseMatrix)
+importFrom(Matrix, bandSparse, sparseMatrix)
 importFrom(ggplot2, ggplot, aes, geom_line, geom_tile, scale_fill_gradient2, theme_minimal, labs)
 importFrom(dplyr, mutate, filter, select, arrange, group_by, summarise)
 importFrom(magrittr, "%>%")

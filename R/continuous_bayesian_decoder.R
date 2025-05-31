@@ -59,7 +59,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
       
       # Store parameters
       private$.K <- K
-      private$.r <- r %||% min(20, ceiling(private$.V / 10))
+      private$.r <- r %||% min(20, ceiling(private$.n_voxels / 10))
       private$.lambda_H_prior <- lambda_H_prior
       private$.sigma2_prior <- sigma2_prior
       private$.engine <- match.arg(engine, c("R", "cpp"))
@@ -90,7 +90,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
       
       if (verbose) {
         cat("Fitting Continuous Bayesian Decoder...\n")
-        cat(sprintf("Data: %d voxels x %d timepoints\n", private$.V, private$.T))
+        cat(sprintf("Data: %d voxels x %d timepoints\n", private$.n_voxels, private$.T))
         cat(sprintf("Model: K=%d states, r=%d rank\n", private$.K, private$.r))
         cat(sprintf("Engine: %s\n", private$.engine))
       }
@@ -108,7 +108,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
     #' @description Get estimated spatial maps
     #' @param as_neurovol Return as neuroim2::NeuroVol if possible
     get_spatial_maps = function(as_neurovol = TRUE) {
-      W <- private$.U %*% t(private$.V)
+      W <- private$.U %*% t(private$.V_coef)
       
       if (as_neurovol && !is.null(private$.original_space)) {
         return(private$.convert_to_neurovol(W))
@@ -150,7 +150,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
     .Y_original = NULL,           # Original input data
     .Y = NULL,                    # Working data matrix (V x T)
     .original_space = NULL,       # neuroim2 space information
-    .V = NULL,                    # Number of voxels
+    .n_voxels = NULL,             # Number of voxels
     .T = NULL,                    # Number of timepoints
     .K = NULL,                    # Number of states
     .r = NULL,                    # Spatial rank
@@ -162,7 +162,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
     
     # Model parameters
     .U = NULL,                    # Spatial basis (V x r)
-    .V = NULL,                    # State coefficients (K x r)
+    .V_coef = NULL,               # State coefficients (K x r)
     .H_v = NULL,                  # HRF coefficients (V x L_basis)
     .Pi = NULL,                   # Transition matrix (K x K)
     .pi0 = NULL,                  # Initial state probabilities
@@ -224,7 +224,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
         private$.original_space <- NULL
       }
       
-      private$.V <- nrow(private$.Y)
+      private$.n_voxels <- nrow(private$.Y)
       private$.T <- ncol(private$.Y)
     },
     
@@ -250,10 +250,10 @@ ContinuousBayesianDecoder <- R6::R6Class(
       # Initialize spatial components via SVD
       Y_svd <- svd(private$.Y, nu = private$.r, nv = 0)
       private$.U <- Y_svd$u
-      private$.V <- matrix(rnorm(private$.K * private$.r), private$.K, private$.r)
+      private$.V_coef <- matrix(rnorm(private$.K * private$.r), private$.K, private$.r)
       
       # Initialize HRF coefficients with least squares
-      private$.H_v <- matrix(0, private$.V, private$.L_basis)
+      private$.H_v <- matrix(0, private$.n_voxels, private$.L_basis)
       # TODO: Implement LS initialization
       
       # Initialize HMM parameters
@@ -274,10 +274,10 @@ ContinuousBayesianDecoder <- R6::R6Class(
     .setup_gmrf_structure = function() {
       if (!is.null(private$.original_space)) {
         # Use neuroim2 spatial structure
-        private$.L_gmrf <- create_gmrf_laplacian_neuroim2(private$.original_space, private$.V)
+        private$.L_gmrf <- create_gmrf_laplacian_neuroim2(private$.original_space, private$.n_voxels)
       } else {
         # Create simple chain graph for matrix input
-        private$.L_gmrf <- create_chain_laplacian(private$.V)
+        private$.L_gmrf <- create_chain_laplacian(private$.n_voxels)
       }
     },
     
@@ -320,7 +320,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
         result <- forward_backward_cpp(
           Y = private$.Y,
           U = private$.U,
-          V = private$.V,
+          V = private$.V_coef,
           H_v = private$.H_v,
           hrf_basis = private$.hrf_basis,
           Pi = private$.Pi,
@@ -397,7 +397,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
 print.ContinuousBayesianDecoder <- function(x, ...) {
   cat("Continuous Bayesian Decoder\n")
   cat("===========================\n")
-  cat(sprintf("Data dimensions: %d voxels x %d timepoints\n", x$.__enclos_env__$private$.V, x$.__enclos_env__$private$.T))
+  cat(sprintf("Data dimensions: %d voxels x %d timepoints\n", x$.__enclos_env__$private$.n_voxels, x$.__enclos_env__$private$.T))
   cat(sprintf("Model parameters: K=%d states, r=%d rank\n", x$.__enclos_env__$private$.K, x$.__enclos_env__$private$.r))
   cat(sprintf("HRF basis: %d timepoints x %d basis functions\n", x$.__enclos_env__$private$.L_hrf, x$.__enclos_env__$private$.L_basis))
   
@@ -427,4 +427,4 @@ as.list.ContinuousBayesianDecoder <- function(x, ...) {
     hrf_estimates = x$get_hrf_estimates(),
     convergence = x$get_convergence()
   )
-} 
+}
