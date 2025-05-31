@@ -9,6 +9,23 @@
 using namespace Rcpp;
 using namespace arma;
 
+// Helper to configure OpenMP threads consistently
+inline int setup_omp_threads(int requested, int n_voxels) {
+#ifdef _OPENMP
+  int max_threads = omp_get_max_threads();
+  int n_threads = (requested <= 0 || requested > max_threads) ? max_threads : requested;
+  omp_set_num_threads(n_threads);
+  if (n_voxels > 1000) {
+    Rcpp::Rcout << "Using " << n_threads << " threads for GLM fitting\n";
+  }
+  return n_threads;
+#else
+  (void)requested;
+  (void)n_voxels;
+  return 1;
+#endif
+}
+
 //' Parallel Voxel-wise GLM Fitting
 //' 
 //' Fits GLMs for multiple voxels in parallel using OpenMP.
@@ -45,33 +62,17 @@ arma::mat parallel_glm_fit_rcpp(const arma::mat& Y,
   
   // Initialize output
   arma::mat B(V, K, fill::zeros);
-  
+
   // Set number of threads
-#ifdef _OPENMP
-  int max_threads = omp_get_max_threads();
-  if (n_threads <= 0 || n_threads > max_threads) {
-    n_threads = max_threads;
-  }
-  omp_set_num_threads(n_threads);
-  
-  if (V > 1000) {  // Only report for large problems
-    Rcout << "Using " << n_threads << " threads for GLM fitting\n";
-  }
-#endif
+  n_threads = setup_omp_threads(n_threads, V);
   
   // Pre-compute X'X and its inverse for efficiency
   arma::mat XtX = X_conv.t() * X_conv;
-  
-  // Check for singularity
-  double det_XtX = det(XtX);
-  if (std::abs(det_XtX) < 1e-10) {
-    stop("Design matrix is singular or near-singular");
-  }
-  
+
+  // Invert X'X; fall back to pseudo-inverse if needed
   arma::mat XtX_inv;
   bool inv_success = inv_sympd(XtX_inv, XtX);
   if (!inv_success) {
-    // Fallback to pseudo-inverse
     warning("Using pseudo-inverse due to numerical issues in X'X");
     XtX_inv = pinv(XtX);
   }
@@ -79,23 +80,20 @@ arma::mat parallel_glm_fit_rcpp(const arma::mat& Y,
   // Pre-compute (X'X)^(-1) * X' for efficiency
   arma::mat XtX_inv_Xt = XtX_inv * X_conv.t();
   
-  // Parallel loop over voxels
-  #pragma omp parallel for schedule(dynamic, chunk_size)
-  for (int v = 0; v < V; v++) {
-    // Extract voxel time series
-    arma::vec y_v = Y.row(v).t();
-    
-    // Check for missing data
-    if (y_v.has_nan() || y_v.has_inf()) {
-      // Skip this voxel, leave coefficients as zeros
-      continue;
+  // If the data contain no missing values, compute coefficients via matrix multiplication
+  if (!Y.has_nan() && !Y.has_inf()) {
+    B = Y * XtX_inv_Xt.t();
+  } else {
+    // Parallel loop over voxels
+    #pragma omp parallel for schedule(dynamic, chunk_size)
+    for (int v = 0; v < V; v++) {
+      arma::vec y_v = Y.row(v).t();
+      if (y_v.has_nan() || y_v.has_inf()) {
+        continue;
+      }
+      arma::vec beta_v = XtX_inv_Xt * y_v;
+      B.row(v) = beta_v.t();
     }
-    
-    // Compute beta = (X'X)^(-1) * X' * y
-    arma::vec beta_v = XtX_inv_Xt * y_v;
-    
-    // Store in output matrix
-    B.row(v) = beta_v.t();
   }
   
   return B;
@@ -109,6 +107,7 @@ arma::mat parallel_glm_fit_rcpp(const arma::mat& Y,
 //' @param X_conv Convolved design matrix (T x K)
 //' @param lambda Ridge penalty parameter
 //' @param n_threads Number of threads to use (0 = auto)
+//' @param chunk_size Size of chunks for dynamic scheduling
 //' 
 //' @return Beta coefficients matrix (V x K)
 //' 
@@ -117,7 +116,8 @@ arma::mat parallel_glm_fit_rcpp(const arma::mat& Y,
 arma::mat parallel_ridge_glm_rcpp(const arma::mat& Y,
                                   const arma::mat& X_conv,
                                   double lambda = 0.01,
-                                  int n_threads = 0) {
+                                  int n_threads = 0,
+                                  int chunk_size = 100) {
   
   // Input validation
   if (Y.is_empty() || X_conv.is_empty()) {
@@ -141,13 +141,7 @@ arma::mat parallel_ridge_glm_rcpp(const arma::mat& Y,
   arma::mat B(V, K, fill::zeros);
   
   // Set number of threads
-#ifdef _OPENMP
-  int max_threads = omp_get_max_threads();
-  if (n_threads <= 0 || n_threads > max_threads) {
-    n_threads = max_threads;
-  }
-  omp_set_num_threads(n_threads);
-#endif
+  n_threads = setup_omp_threads(n_threads, V);
   
   // Pre-compute X'X + lambda*I and its inverse
   arma::mat XtX = X_conv.t() * X_conv;
@@ -163,7 +157,7 @@ arma::mat parallel_ridge_glm_rcpp(const arma::mat& Y,
   arma::mat XtX_reg_inv_Xt = XtX_reg_inv * X_conv.t();
   
   // Parallel loop over voxels
-  #pragma omp parallel for schedule(dynamic, 100)
+  #pragma omp parallel for schedule(dynamic, chunk_size)
   for (int v = 0; v < V; v++) {
     // Extract voxel time series
     arma::vec y_v = Y.row(v).t();
