@@ -184,7 +184,7 @@ test_that("HRF convolution handles edge cases", {
 })
 
 test_that("Gradient computation is numerically stable", {
-  skip_if_not(exists("compute_gradient_fista_rcpp"), "Rcpp functions not compiled")
+  skip_if_not(exists("compute_gradient_fista_precomp_rcpp"), "Rcpp functions not compiled")
   
   # Test with extreme values
   W <- matrix(c(1e6, 1e-6, 1, 1e6, 1e-6, 1), nrow = 3, ncol = 2)
@@ -194,13 +194,15 @@ test_that("Gradient computation is numerically stable", {
   # Compute convolved X
   H_star_X <- stance:::convolve_rows_rcpp(X, hrf)
   
+  WtW <- t(W) %*% W
+  WtY <- WtW %*% H_star_X
+
   # This should not produce NaN or Inf
-  grad <- stance:::compute_gradient_fista_rcpp(
-    Y_or_WtY = t(W) %*% W %*% H_star_X,
-    W = W,
+  grad <- stance:::compute_gradient_fista_precomp_rcpp(
+    WtY = WtY,
+    WtW = WtW,
     H_star_X = H_star_X,
-    hrf_kernel = hrf,
-    precomputed_WtY = FALSE
+    hrf_kernel = hrf
   )
   
   expect_true(all(is.finite(grad)))
