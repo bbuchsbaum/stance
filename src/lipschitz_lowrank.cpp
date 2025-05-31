@@ -63,15 +63,32 @@ arma::mat compute_WtY_lowrank_rcpp(const arma::mat& U,
                                    const arma::vec& S,
                                    const arma::mat& V,
                                    const arma::mat& Y) {
+  // Input validation
+  if (U.is_empty() || S.is_empty() || V.is_empty() || Y.is_empty()) {
+    stop("Input matrices/vectors cannot be empty");
+  }
+
+  // Dimension checks
+  if (U.n_cols != S.n_elem) {
+    stop("Dimension mismatch: U.n_cols (%d) != length(S) (%d)",
+         U.n_cols, S.n_elem);
+  }
+  if (V.n_cols != S.n_elem) {
+    stop("Dimension mismatch: V.n_cols (%d) != length(S) (%d)",
+         V.n_cols, S.n_elem);
+  }
+  if (Y.n_rows != U.n_rows) {
+    stop("Dimension mismatch: Y.n_rows (%d) != U.n_rows (%d)",
+         Y.n_rows, U.n_rows);
+  }
+
   // W'Y = V * diag(S) * U' * Y
   // Compute U'Y first (r x T)
   arma::mat UtY = U.t() * Y;
-  
-  // Scale by S
-  for (int i = 0; i < S.n_elem; i++) {
-    UtY.row(i) *= S(i);
-  }
-  
+
+  // Scale rows of U'Y by singular values
+  UtY.each_col() %= S;
+
   // Return V * (S * U'Y)
   return V * UtY;
 }
@@ -89,15 +106,21 @@ arma::mat compute_WtY_lowrank_rcpp(const arma::mat& U,
 // [[Rcpp::export]]
 arma::mat compute_WtW_lowrank_rcpp(const arma::mat& V,
                                    const arma::vec& S) {
-  // W'W = V * diag(S^2) * V'
-  arma::vec S_sq = square(S);
-  
-  // Scale columns of V by sqrt(S^2) = S
-  arma::mat V_scaled = V;
-  for (int i = 0; i < S.n_elem; i++) {
-    V_scaled.col(i) *= S(i);
+  // Input validation
+  if (V.is_empty() || S.is_empty()) {
+    stop("Input matrices/vectors cannot be empty");
   }
-  
-  // Return V_scaled * V'
-  return V_scaled * V.t();
+
+  // Dimension check
+  if (V.n_cols != S.n_elem) {
+    stop("Dimension mismatch: V.n_cols (%d) != length(S) (%d)",
+         V.n_cols, S.n_elem);
+  }
+
+  // Scale columns of V by singular values
+  arma::mat V_scaled = V;
+  V_scaled.each_row() %= S.t();
+
+  // Return V_scaled * V_scaled'
+  return V_scaled * V_scaled.t();
 }
