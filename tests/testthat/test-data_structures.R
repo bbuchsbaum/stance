@@ -33,11 +33,20 @@ test_that("validate_fmri_input works with matrix input", {
 test_that("validate_fmri_input handles data.frame input", {
   # Create test data.frame
   Y_df <- as.data.frame(matrix(rnorm(100 * 50), nrow = 100, ncol = 50))
-  
+
   result <- validate_fmri_input(Y_df)
   expect_equal(result$type, "data.frame")
   expect_true(is.matrix(result$data))
+  expect_true(is.numeric(result$data))
   expect_equal(dim(result$data), c(100, 50))
+})
+
+test_that("validate_fmri_input errors with non-numeric data.frame", {
+  Y_bad <- data.frame(a = rnorm(10), b = letters[1:10])
+  expect_error(
+    validate_fmri_input(Y_bad),
+    "non-numeric columns"
+  )
 })
 
 test_that("extract_data_matrix handles different input types", {
@@ -46,7 +55,12 @@ test_that("extract_data_matrix handles different input types", {
   result <- extract_data_matrix(mat)
   expect_equal(result$data, mat)
   expect_equal(result$metadata$class, "matrix")
-  
+
+  # With force_matrix flag (should be identical for matrix input)
+  result_force <- extract_data_matrix(mat, force_matrix = TRUE)
+  expect_equal(result_force$data, mat)
+  expect_equal(result_force$metadata$class, "matrix")
+
   # Test preserve_attributes = FALSE
   result2 <- extract_data_matrix(mat, preserve_attributes = FALSE)
   expect_equal(length(result2$metadata), 0)

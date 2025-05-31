@@ -292,65 +292,34 @@ compute_data_likelihood_term <- function(Y, S_gamma, U, V, H_v, hrf_basis, sigma
   # Compute expected log likelihood under variational distribution
   V_voxels <- nrow(Y)
   T <- ncol(Y)
-  K <- nrow(S_gamma)
-  
-  # For efficiency, vectorize the computation
-  # Expected reconstruction is weighted sum of state contributions
+
+  # Precompute spatial maps (V x K)
+  W <- U %*% t(V)
+
+  # Expected reconstruction for all time points
+  Y_hat <- W %*% S_gamma
+
+  # Reconstruction error
+  reconstruction_error <- sum((Y - Y_hat)^2)
+
+  # Log-likelihood (up to constant)
   log_lik <- -0.5 * V_voxels * T * log(2 * pi * sigma2)
-  
-  # Compute reconstruction error
-  # Y_hat = sum_k gamma_k * W_k * conv(e_k, HRF)
-  # where W_k = U * V_k' (low-rank form)
-  
-  # Simplified computation - full version would integrate over HRF uncertainty
-  reconstruction_error <- 0
-  for (t in seq_len(T)) {
-    y_t <- Y[, t]
-    y_hat_t <- numeric(V_voxels)
-    
-    for (k in seq_len(K)) {
-      # Get expected state probability
-      gamma_kt <- S_gamma[k, t]
-      
-      # Compute HRF-convolved contribution
-      # This is simplified - full version would handle HRF convolution properly
-      if (gamma_kt > 1e-10) {
-        # W_k = U %*% V[k, ]
-        w_k_contribution <- U %*% V[k, ]
-        y_hat_t <- y_hat_t + gamma_kt * w_k_contribution
-      }
-    }
-    
-    # Add squared error
-    reconstruction_error <- reconstruction_error + sum((y_t - y_hat_t)^2)
-  }
-  
   log_lik <- log_lik - 0.5 * reconstruction_error / sigma2
-  
-  return(log_lik)
+
+  log_lik
 }
 
 #' @keywords internal
 compute_hmm_prior_term <- function(S_gamma, S_xi, Pi, pi0) {
-  # Compute expected log prior for HMM
-  K <- nrow(S_gamma)
-  T <- ncol(S_gamma)
-  
-  # Initial state prior
+  # Compute expected log prior for HMM using vectorized operations
   log_prior <- sum(S_gamma[, 1] * log(pi0 + 1e-10))
-  
-  # Transition prior
-  for (t in 2:T) {
-    for (i in 1:K) {
-      for (j in 1:K) {
-        if (S_xi[i, j, t-1] > 1e-10) {
-          log_prior <- log_prior + S_xi[i, j, t-1] * log(Pi[i, j] + 1e-10)
-        }
-      }
-    }
+
+  if (!is.null(S_xi) && length(dim(S_xi)) == 3) {
+    Pi_rep <- array(Pi + 1e-10, dim = dim(S_xi))
+    log_prior <- log_prior + sum(S_xi * log(Pi_rep))
   }
-  
-  return(log_prior)
+
+  log_prior
 }
 
 #' @keywords internal
@@ -379,49 +348,27 @@ compute_gmrf_prior_term <- function(H_v, L_gmrf, lambda_H_prior) {
 #' @keywords internal
 compute_entropy_term <- function(S_gamma, S_xi) {
   # Compute entropy of variational distribution
-  # H[q(S)] = -E_q[log q(S)]
-  
-  K <- nrow(S_gamma)
-  T <- ncol(S_gamma)
-  
-  # Entropy of state probabilities
-  entropy <- 0
-  
-  # Single state entropy
-  for (t in seq_len(T)) {
-    for (k in seq_len(K)) {
-      if (S_gamma[k, t] > 1e-10) {
-        entropy <- entropy - S_gamma[k, t] * log(S_gamma[k, t])
-      }
-    }
-  }
-  
-  # Pairwise state entropy (from xi)
+  entropy <- -sum(S_gamma * log(S_gamma + 1e-10))
+
   if (!is.null(S_xi) && length(dim(S_xi)) == 3) {
-    for (t in 1:(T-1)) {
-      for (i in 1:K) {
-        for (j in 1:K) {
-          if (S_xi[i, j, t] > 1e-10) {
-            entropy <- entropy - S_xi[i, j, t] * log(S_xi[i, j, t])
-          }
-        }
-      }
-    }
+    entropy <- entropy - sum(S_xi * log(S_xi + 1e-10))
   }
-  
-  return(entropy)
+
+  entropy
 }
 
 #' @keywords internal
 compute_residual_sum_squares <- function(Y, S_gamma, U, V, H_v, hrf_basis) {
-  # Compute expected residual sum of squares
-  V_voxels <- nrow(Y)
-  T <- ncol(Y)
-  K <- nrow(S_gamma)
+
+  # Compute expected residual sum of squares using matrix operations
+  W <- U %*% t(V)
+  Y_hat <- W %*% S_gamma
+  sum((Y - Y_hat)^2)
+
   
   rss <- 0
   
-  # Simplified computation - full version would properly handle HRF convolution
+  # Simplified computation - TODO full version would properly handle HRF convolution
   for (t in seq_len(T)) {
     y_t <- Y[, t]
     y_hat_t <- numeric(V_voxels)
@@ -441,4 +388,4 @@ compute_residual_sum_squares <- function(Y, S_gamma, U, V, H_v, hrf_basis) {
   }
   
   return(rss)
-} 
+}
