@@ -141,9 +141,15 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
   # Combine signal and noise based on SNR
   signal_power <- mean(signal^2)
   noise_power <- mean(noise^2)
-  noise_scaled <- noise * sqrt(signal_power / (snr * noise_power))
-  
-  Y <- signal + noise_scaled
+
+  if (snr <= 0) {
+    # Avoid division by zero or negative scaling
+    noise_scaled <- noise
+    Y <- noise_scaled
+  } else {
+    noise_scaled <- noise * sqrt(signal_power / (snr * noise_power))
+    Y <- signal + noise_scaled
+  }
   
   # Create output structure
   output <- list(
@@ -540,9 +546,14 @@ simulate_multi_subject <- function(n_subjects, V, T, K,
     # Scale noise based on SNR
     signal_power <- mean(signal_subj^2)
     noise_power <- mean(noise_subj^2)
-    noise_scaled <- noise_subj * sqrt(signal_power / (group_sim$params$snr * noise_power))
-    
-    Y_subj <- signal_subj + noise_scaled
+
+    if (group_sim$params$snr <= 0) {
+      noise_scaled <- noise_subj
+      Y_subj <- noise_scaled
+    } else {
+      noise_scaled <- noise_subj * sqrt(signal_power / (group_sim$params$snr * noise_power))
+      Y_subj <- signal_subj + noise_scaled
+    }
     
     subject_data[[subj]] <- list(
       Y = Y_subj,
