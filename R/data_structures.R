@@ -93,9 +93,10 @@ validate_fmri_input <- function(Y, expected_dims = NULL, check_finite = TRUE, ve
   
   # Check for finite values
   if (check_finite) {
-    if (!all(is.finite(result$data))) {
-      n_na <- sum(is.na(result$data))
-      n_inf <- sum(is.infinite(result$data))
+    non_finite <- !is.finite(result$data)
+    if (any(non_finite)) {
+      n_na <- sum(is.na(result$data[non_finite]))
+      n_inf <- sum(is.infinite(result$data[non_finite]))
       stop(sprintf("Data contains non-finite values: %d NA, %d Inf/-Inf", n_na, n_inf))
     }
   }
