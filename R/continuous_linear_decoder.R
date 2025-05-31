@@ -514,8 +514,7 @@ ContinuousLinearDecoder <- R6::R6Class(
           U = private$.U_r,
           S = private$.S_r,
           V = private$.V_r,
-          hrf_kernel = private$.hrf,
-          T = ncol(private$.Y)
+          hrf_kernel = private$.hrf
         )
       } else {
         # Use full W matrix
