@@ -138,17 +138,23 @@ convolve_with_hrf <- function(X, hrf, use_fft_threshold = 256, method = "auto") 
   # Single HRF case
   if (is.vector(hrf)) {
     if (method == "fft") {
-      # FFT-based convolution
-      result <- t(apply(X, 1, function(row) {
-        convolve_fft(row, hrf)
-      }))
+      # Precompute FFT of the HRF once and reuse for all rows
+      n_h <- length(hrf)
+      n_fft <- 2^ceiling(log2(n_time + n_h - 1))
+      h_pad <- c(hrf, rep(0, n_fft - n_h))
+      H_fft <- stats::fft(h_pad)
+
+      result <- matrix(0, n_signals, n_time)
+      for (i in seq_len(n_signals)) {
+        result[i, ] <- convolve_fft(X[i, ], hrf, H_fft = H_fft, n_fft = n_fft)
+      }
     } else {
       # Direct convolution
-      result <- t(apply(X, 1, function(row) {
-        conv_out <- stats::convolve(row, rev(hrf), type = "open")
-        # Trim to original length
-        conv_out[seq_len(n_time)]
-      }))
+      result <- matrix(0, n_signals, n_time)
+      for (i in seq_len(n_signals)) {
+        conv_out <- stats::convolve(X[i, ], rev(hrf), type = "open")
+        result[i, ] <- conv_out[seq_len(n_time)]
+      }
     }
   } else if (is.matrix(hrf)) {
     # Multiple HRFs case (for future CBD support)
@@ -157,10 +163,17 @@ convolve_with_hrf <- function(X, hrf, use_fft_threshold = 256, method = "auto") 
     }
     
     result <- matrix(0, n_signals, n_time)
-    for (i in seq_len(n_signals)) {
-      if (method == "fft") {
-        result[i, ] <- convolve_fft(X[i, ], hrf[i, ])
-      } else {
+    if (method == "fft") {
+      # Precompute FFT for each HRF once
+      for (i in seq_len(n_signals)) {
+        n_h <- length(hrf[i, ])
+        n_fft <- 2^ceiling(log2(n_time + n_h - 1))
+        h_pad <- c(hrf[i, ], rep(0, n_fft - n_h))
+        H_fft <- stats::fft(h_pad)
+        result[i, ] <- convolve_fft(X[i, ], hrf[i, ], H_fft = H_fft, n_fft = n_fft)
+      }
+    } else {
+      for (i in seq_len(n_signals)) {
         conv_out <- stats::convolve(X[i, ], rev(hrf[i, ]), type = "open")
         result[i, ] <- conv_out[seq_len(n_time)]
       }
@@ -178,22 +191,30 @@ convolve_with_hrf <- function(X, hrf, use_fft_threshold = 256, method = "auto") 
 #'
 #' @param x Signal vector
 #' @param h Kernel vector
+#' @param H_fft Optional precomputed FFT of the padded kernel
+#' @param n_fft Optional FFT length (must correspond to `H_fft` if provided)
 #' @return Convolved signal (trimmed to original length)
 #' @keywords internal
-convolve_fft <- function(x, h) {
+convolve_fft <- function(x, h, H_fft = NULL, n_fft = NULL) {
   n_x <- length(x)
   n_h <- length(h)
-  n_fft <- 2^ceiling(log2(n_x + n_h - 1))
-  
-  # Zero-pad signals
+  if (is.null(n_fft)) {
+    n_fft <- 2^ceiling(log2(n_x + n_h - 1))
+  }
+
+  # Zero-pad signal
   x_pad <- c(x, rep(0, n_fft - n_x))
-  h_pad <- c(h, rep(0, n_fft - n_h))
-  
+
+  # Precompute FFT of kernel if not supplied
+  if (is.null(H_fft)) {
+    h_pad <- c(h, rep(0, n_fft - n_h))
+    H_fft <- stats::fft(h_pad)
+  }
+
   # FFT convolution
   X_fft <- stats::fft(x_pad)
-  H_fft <- stats::fft(h_pad)
   Y_fft <- X_fft * H_fft
-  
+
   # Inverse FFT and trim
   y <- Re(stats::fft(Y_fft, inverse = TRUE)) / n_fft
   y[seq_len(n_x)]
