@@ -21,8 +21,8 @@ NULL
 #' 
 #' @return Invisible NULL, plots are displayed
 #' @export
-#' @importFrom graphics par image layout
-plot_spatial_maps <- function(W, layout = NULL, zlim = NULL, 
+#' @importFrom graphics par image
+plot_spatial_maps <- function(W, layout = NULL, zlim = NULL,
                               col = heat.colors(100), titles = NULL, mask = NULL) {
   # Handle NeuroVol input
   if (is.list(W) && all(sapply(W, inherits, "NeuroVol"))) {
@@ -262,7 +262,7 @@ plot_diagnostics <- function(decoder_output, which = 1:4, ...) {
   
   n_plots <- length(which)
   layout_matrix <- matrix(c(1:n_plots, rep(0, 4-n_plots)), 2, 2, byrow = TRUE)
-  layout(layout_matrix)
+  graphics::layout(layout_matrix)
   
   for (i in which) {
     if (i == 1 && !is.null(decoder_output$W)) {
