@@ -12,6 +12,11 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
                                       bool precomputed_WtY,
                                       const arma::mat& WtW_precomp = arma::mat());
 
+arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
+                                              const arma::mat& WtW,
+                                              const arma::mat& H_star_X,
+                                              const arma::vec& hrf_kernel);
+
 arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv);
 
 arma::mat convolve_rows_rcpp(const arma::mat& X, const arma::vec& hrf);
@@ -162,8 +167,9 @@ List fista_tv_rcpp(const arma::mat& WtY,
     
     // Compute gradient at Z
     arma::mat H_star_Z = convolve_rows_rcpp(Z, hrf_kernel);
-    arma::mat gradient = compute_gradient_fista_rcpp(WtY, W, H_star_Z,
-                                                     hrf_kernel, true, WtW);
+    arma::mat gradient = compute_gradient_fista_precomp_rcpp(WtY, WtW,
+                                                             H_star_Z,
+                                                             hrf_kernel);
     
     // Gradient step
     arma::mat X_tilde = Z - step_size * gradient;
