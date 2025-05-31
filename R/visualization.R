@@ -57,10 +57,11 @@ plot_spatial_maps <- function(W, layout = NULL, zlim = NULL,
     zlim <- range(W_mat, na.rm = TRUE)
   }
   
+  # Compute matrix dimensions once
+  dims <- try_reshape_vector(V)
+
   # Plot each spatial map
   for (k in 1:K) {
-    # Try to reshape to approximate square
-    dims <- try_reshape_vector(V)
     map_matrix <- matrix(W_mat[, k], dims[1], dims[2])
     
     image(map_matrix, zlim = zlim, col = col, axes = FALSE,
