@@ -63,18 +63,14 @@ setup_hrf_kernel <- function(spec = "spmg1", TR = 2, len = 32, normalize = TRUE)
     }
     
     # Generate HRF using fmrireg
-    # Create sampling frame for HRF evaluation
-    sframe <- fmrireg::sampling_frame(1, len, TR)
-    
-    # Get appropriate HRF basis from fmrireg
     hrf_basis <- switch(spec,
       "spmg1" = fmrireg::HRF_SPMG1,
       "spmg2" = fmrireg::HRF_SPMG2,
       "spmg3" = fmrireg::HRF_SPMG3,
       "gamma" = fmrireg::HRF_GAMMA,
       "gaussian" = fmrireg::HRF_GAUSSIAN,
-      "bspline" = fmrireg::HRF_BSPLINE,
-      "fir" = fmrireg::HRF_FIR,
+      "bspline" = fmrireg::HRF_BSPLINE(),
+      "fir" = fmrireg::HRF_FIR(),
       stop("Unknown HRF specification: ", spec)
     )
     
@@ -207,14 +203,15 @@ convolve_fft <- function(x, h) {
 #' @param basis_type Character string specifying basis type
 #' @param TR Repetition time in seconds
 #' @param len Length of HRF in seconds
-#' @param n_basis Number of basis functions (for FIR, B-spline)
+#' @param n_basis Number of basis functions (for FIR, B-spline).
+#'   If `NULL`, defaults to 5 for B-spline and 12 for FIR. Other
+#'   basis types ignore this argument and use their built-in size.
 #' 
 #' @return Matrix with basis functions in columns
 #' 
 #' @export
 hrf_basis_matrix <- function(basis_type = "spmg3", TR = 2, len = 32, n_basis = NULL) {
-  # Create sampling frame
-  sframe <- fmrireg::sampling_frame(1, len, TR)
+  # Time grid for evaluation
   time_points <- seq(0, len, by = TR)
   
   # Get appropriate basis
@@ -226,11 +223,11 @@ hrf_basis_matrix <- function(basis_type = "spmg3", TR = 2, len = 32, n_basis = N
     "gaussian" = fmrireg::HRF_GAUSSIAN,
     "bspline" = {
       if (is.null(n_basis)) n_basis <- 5
-      fmrireg::HRF_BSPLINE
+      fmrireg::HRF_BSPLINE(nbasis = n_basis)
     },
     "fir" = {
       if (is.null(n_basis)) n_basis <- 12
-      fmrireg::HRF_FIR
+      fmrireg::HRF_FIR(nbasis = n_basis)
     },
     stop("Unknown basis type: ", basis_type)
   )
