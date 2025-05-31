@@ -62,7 +62,17 @@ plot_spatial_maps <- function(W, layout = NULL, zlim = NULL,
 
   # Plot each spatial map
   for (k in 1:K) {
-    map_matrix <- matrix(W_mat[, k], dims[1], dims[2])
+
+    # Try to reshape to approximate square; pad if necessary
+    dims <- try_reshape_vector(V)
+    map_vals <- W_mat[, k]
+    total <- prod(dims)
+    if (total > length(map_vals)) {
+      map_vals <- c(map_vals, rep(NA, total - length(map_vals)))
+    }
+    map_matrix <- matrix(map_vals, dims[1], dims[2])
+
+
     
     image(map_matrix, zlim = zlim, col = col, axes = FALSE,
           main = if (!is.null(titles)) titles[k] else paste("State", k))
@@ -235,16 +245,25 @@ plot_hrf <- function(hrf, TR = 2, col = NULL, main = "HRF", ...) {
 #' @keywords internal
 try_reshape_vector <- function(n) {
   sqrt_n <- sqrt(n)
-  if (sqrt_n == floor(sqrt_n)) {
-    return(c(sqrt_n, sqrt_n))
+
+  best_dims <- c(1, n)
+  best_diff <- Inf
+  best_area <- Inf
+
+  for (r in 1:ceiling(sqrt_n)) {
+    c <- ceiling(n / r)
+    dims <- sort(c(r, c))
+    diff <- dims[2] - dims[1]
+    area <- prod(dims)
+
+    if (diff < best_diff || (diff == best_diff && area < best_area)) {
+      best_diff <- diff
+      best_area <- area
+      best_dims <- dims
+    }
   }
-  
-  # Find factors closest to square root
-  factors <- which(n %% 1:n == 0)
-  diffs <- abs(factors - sqrt_n)
-  best_factor <- factors[which.min(diffs)]
-  
-  c(best_factor, n / best_factor)
+
+  best_dims
 }
 
 #' Create Diagnostic Plot Panel
