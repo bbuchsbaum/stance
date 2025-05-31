@@ -10,3 +10,20 @@ Use **CLD** when you have a reliable design matrix and want fast estimation. Use
 ## Parallel Processing
 
 Several low-level routines such as row-wise convolution and total variation denoising are implemented in C++ with optional OpenMP support. When compiled with OpenMP, these functions can run in parallel across rows and the number of threads can be controlled via the `n_threads` argument (use `0` to auto-detect).
+
+## HRF estimation and Rcpp engine
+
+Hemodynamic response functions (HRFs) are generated using helper
+functions such as `create_hrf_basis_canonical()` and
+`create_hrf_basis_fir()` which internally call the *fmrireg* package.
+The resulting basis matrices are orthonormal by default so that unit
+tests remain stable.  Voxel‑wise HRF coefficients are initialised using
+the Rcpp routine `update_hrf_coefficients_batched_cpp` and stored for
+each voxel.
+
+The core E‑step kernels—`compute_log_likelihoods_rcpp`,
+`forward_pass_rcpp` and `backward_pass_rcpp`—are implemented with
+RcppArmadillo.  When the package is compiled without these functions,
+pure R fallbacks are used automatically.  All routines operate on plain
+matrices or on `neuroim2::NeuroVec` objects (the data are extracted with
+metadata preserved).

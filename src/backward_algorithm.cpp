@@ -1,6 +1,10 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::plugins(cpp11)]]
+
+// Companion to `forward_pass_rcpp`; processes the sequence in
+// reverse using Armadillo operations.  Designed for use with data
+// converted from neuroim2 objects.
 #include "hmm_utils.h"
 
 using namespace Rcpp;
@@ -9,7 +13,9 @@ using namespace arma;
 //' Backward Algorithm for HMM (CBD)
 //'
 //' Computes the backward probabilities (beta) for a sequence of
-//' log-likelihoods given scaling factors from the forward pass.
+//' log-likelihoods given scaling factors from the forward pass.  The
+//' implementation mirrors the pure R version but is significantly
+//' faster for large matrices.
 //'
 //' @param log_lik K x T matrix of log-likelihoods
 //' @param Pi      K x K state transition matrix

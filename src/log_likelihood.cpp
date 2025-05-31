@@ -2,14 +2,21 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::plugins(cpp11)]]
 
+// This routine forms part of the C++ engine used by the
+// ContinuousBayesianDecoder.  It works with matrices produced by
+// `neuroim2` after extraction and with HRF kernels generated via the
+// `fmrireg` helpers in the R API.
+
 using namespace Rcpp;
 using namespace arma;
 
 //' Compute Log Likelihoods (CBD)
 //'
 //' Calculates log-likelihood values for each latent state at each
-//' time point. Inputs are already projected into the low-rank
-//' space to avoid expensive V x T operations.
+//' time point.  Inputs are already projected into the low-rank
+//' space to avoid expensive V x T operations.  The HRF kernel is
+//' typically produced by `create_hrf_basis_*()` wrappers around
+//' the \pkg{fmrireg} HRF generators.
 //'
 //' @param Y_proj r x T matrix of projected data (U'Y)
 //' @param Vmat   K x r matrix of state loadings

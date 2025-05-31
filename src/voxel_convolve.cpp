@@ -2,6 +2,11 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::plugins(cpp11)]]
 
+// Helper used by the CBD implementation to convolve state regressors
+// with voxel-specific HRFs generated via \pkg{fmrireg}.  Accepts
+// matrices or data extracted from `neuroim2` objects and supports
+// optional OpenMP parallelism.
+
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -18,6 +23,7 @@ using namespace arma;
 //' The current implementation always uses direct time-domain
 //' convolution. The `fft_threshold` argument is accepted for future
 //' FFT-based implementation and allows tests to force the direct path.
+//' When compiled with OpenMP the convolution loops run in parallel.
 //'
 //' @param design Matrix of regressors (K x T)
 //' @param hrfs   Matrix of HRF kernels (V x L)
