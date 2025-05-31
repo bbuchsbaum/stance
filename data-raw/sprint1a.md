@@ -11,18 +11,69 @@
 
 ---
 
+## **🚀 PARALLEL EXECUTION STRATEGY**
+
+**Sprint 1a has been analyzed for parallel development opportunities to minimize git merge conflicts:**
+
+### **Phase 1: Sequential Foundation Setup** 🟡
+**Must be completed in order:**
+- **S1a-T01** → **S1a-T02** → **S1a-T03** → **S1a-T04** → **S1a-T05**
+
+**Rationale:** Project setup, shared utilities, and R6 class skeleton must be established before other components can build upon them.
+
+### **Phase 2: Parallel Development Groups** 🟢
+**After Phase 1 completion, these can proceed in parallel:**
+
+**📊 Group A: R6 Core Methods (Medium Conflict Risk)**
+- **S1a-T06** 🟡 Initialize method & W learning
+- **S1a-T07** 🟢 Getter methods & S3 interface  
+- **S1a-T13** 🟢 Public fit method
+
+**⚙️ Group B: Algorithm Implementation (Low Conflict Risk)**
+- **S1a-T08** 🟢 GLM+SVD W learning (private method)
+- **S1a-T09** 🟢 FFT convolution operator
+- **S1a-T10** 🟢 FISTA gradient (Rcpp)
+- **S1a-T11** 🟢 TV prox operator (Rcpp)
+- **S1a-T12** 🟢 FISTA loop (Rcpp)
+
+**🧪 Group C: Testing & Validation (No Conflict Risk)**
+- **S1a-T14** 🟢 Shared test suite
+- **S1a-T15** 🟢 Documentation & polish
+- **S1a-T18** 🟢 Robustness testing
+
+**📈 Group D: Enhancement Features (No Conflict Risk)**
+- **S1a-T16** 🟢 Performance benchmarks
+- **S1a-T17** 🟢 Visualization methods
+
+### **Conflict Risk Assessment:**
+
+| **File/Component** | **Tickets** | **Conflict Risk** | **Mitigation** |
+|------------------|-------------|------------------|---------------|
+| `R/ContinuousLinearDecoder.R` | T05, T06, T07, T13 | 🟡 **Medium** | T06 must complete before T07, T13 |
+| `R/cld-math.R` | T08, T09, T10, T11, T12 | 🟢 **Low** | Separate functions, clear interfaces |
+| `src/*.cpp` | T10, T11, T12 | 🟢 **Low** | Independent Rcpp functions |
+| `tests/testthat/*.R` | T14, T18 | 🟢 **None** | Separate test files |
+| `inst/`, `vignettes/` | T15, T16, T17 | 🟢 **None** | Independent directories |
+
+### **Recommended Execution:**
+1. **Week 1:** Complete Phase 1 sequentially (T01-T05)
+2. **Week 2-3:** Execute Phase 2 groups in parallel, with T06 priority in Group A
+3. **Week 4:** Integration testing and polish
+
+---
+
 **Sprint 1a (Revised): Continuous Linear Decoder (CLD) - Granular Tickets**
 
 **Theme 1: Shared Infrastructure Setup (🟢 REUSABLE FOR SPRINT 1)**
 
-1.  **Ticket S1a-T01 (Revised): Initialize Project Repository & Shared Environment** 🟢 **[SHARED FOUNDATION]**
+1.  **Ticket S1a-T01 (Revised): Initialize Project Repository & Shared Environment** 🟡 **[SEQUENTIAL - PROJECT FOUNDATION]**
     *   Description: Set up Git repository. Define R project structure (R package layout). Establish `renv`. **Add `usethis::use_github_action("check-standard")` for automated R CMD checks.**
         *   Include `neuroim2` and `fmrireg` as key dependencies in the project setup.
         *   Configure package structure to support neuroimaging data workflows.
         *   **🔄 Create shared directories:** `R/`, `src/`, `tests/testthat/`, `inst/`
         *   **🔄 Establish shared files:** `R/stance-package.R`, `R/data_structures.R`, `R/hrf_utils.R`, `R/simulate.R`, `R/visualization.R`
     *   Acceptance Criteria: Project initialized, `renv.lock` created, GitHub Action for checks configured. Neuroimaging dependencies properly declared. **Shared infrastructure files created.**
-2.  **Ticket S1a-T02 (Revised): Implement Shared Data Structure Utilities** 🟢 **[SHARED FOUNDATION]**
+2.  **Ticket S1a-T02 (Revised): Implement Shared Data Structure Utilities** 🟡 **[SEQUENTIAL - REQUIRED BY ALL]**
     *   Description: Create `R/data_structures.R` with functions for seamless matrix ↔ `neuroim2::NeuroVec`/`neuroim2::NeuroVol` conversion:
         *   `validate_fmri_input()`: Check dimensions, detect data type, validate spatial metadata
         *   `extract_data_matrix()`: Convert neuroimaging objects to matrices for computation
@@ -30,7 +81,7 @@
         *   `check_temporal_alignment()`: Validate TR alignment between data and design
         *   **🔄 Design for both CLD and CBD:** Ensure functions work for both deterministic and probabilistic outputs
     *   Acceptance Criteria: Robust data structure handling for both algorithms. Compatible with `neuroim2` ecosystem. **Shared utilities ready for Sprint 1 reuse.**
-3.  **Ticket S1a-T03 (Revised): Implement Shared HRF Utilities** 🟢 **[SHARED FOUNDATION]**
+3.  **Ticket S1a-T03 (Revised): Implement Shared HRF Utilities** 🟡 **[SEQUENTIAL - REQUIRED BY ALL]**
     *   Description: Create `R/hrf_utils.R` with HRF processing functions leveraging `fmrireg`:
         *   `setup_hrf_kernel()`: Accept `fmrireg` HRF specs or numeric vectors, normalize to unit energy
         *   `convolve_with_hrf()`: Efficient convolution with FFT fallback thresholds
@@ -38,7 +89,7 @@
         *   `validate_hrf_spec()`: Check HRF specifications and provide informative errors
         *   **🔄 Design for CBD HRF modeling:** Support both fixed HRFs (CLD) and voxel-wise HRFs (CBD)
     *   Acceptance Criteria: HRF utilities compatible with both algorithms. Integration with `fmrireg` ecosystem. **Ready for Sprint 1 HMM convolution operations.**
-4.  **Ticket S1a-T04 (Revised): Implement Unified Simulation Framework** 🟢 **[SHARED FOUNDATION]**
+4.  **Ticket S1a-T04 (Revised): Implement Unified Simulation Framework** 🟡 **[SEQUENTIAL - REQUIRED BY ALL]**
     *   Description: Create `R/simulate.R` with comprehensive simulation supporting both algorithms:
         *   `simulate_fmri_data()`: Unified function with algorithm-specific options
         *   Support CLD mode: GLM-based spatial maps, continuous activations with TV structure
@@ -50,13 +101,13 @@
 
 **Theme 2: CLD-Specific R6 Class Structure**
 
-5.  **Ticket S1a-T05 (Revised): Define `ContinuousLinearDecoder` R6 Class Skeleton**
+5.  **Ticket S1a-T05 (Revised): Define `ContinuousLinearDecoder` R6 Class Skeleton** 🟡 **[SEQUENTIAL - CLASS FOUNDATION]**
     *   Description: Create `ContinuousLinearDecoder.R`. Define R6 class with private fields (e.g., `$.Y`, `$.hrf`, `$.rank`, `$.lambda_tv`, `$.W`, `$.WtY`, `$.X_hat`, `$.config`, `$.L_fista`) and public methods. **Create `R/cld-math.R` for small math helper functions.**
         *   Design class to handle both standard matrices and `neuroim2::NeuroVec`/`neuroim2::NeuroVol` objects seamlessly using shared utilities.
         *   Include fields for `neuroim2` spatial metadata when working with neuroimaging data.
         *   **🔄 Design patterns for CBD reuse:** Use similar R6 structure and method signatures that CBD can follow
     *   Acceptance Criteria: R6 class definition exists. Helper file `cld-math.R` created. Compatible with neuroimaging data structures. **Provides R6 template for Sprint 1 CBD class.**
-6.  **Ticket S1a-T06 (Revised): Implement R6 `initialize` Method (Core Parameters & `W` Learning)**
+6.  **Ticket S1a-T06 (Revised): Implement R6 `initialize` Method (Core Parameters & `W` Learning)** 🟡 **[GROUP A PRIORITY - REQUIRED BEFORE T07,T13]**
     *   Description: Flesh out the `initialize` method using shared utilities:
         *   Inputs: `Y` (matrix or `neuroim2::NeuroVec`), `S_design` (`K x T` matrix), `hrf_kernel` (or `fmrireg` HRF specification), `rank`, `lambda_tv`.
         *   Use `validate_fmri_input()` and `setup_hrf_kernel()` from shared utilities
@@ -68,7 +119,7 @@
         *   Initialize `self$.X_hat` (e.g., to zeros `K x T`).
         *   (Placeholder) Estimate Lipschitz constant `L` for FISTA and store in `private$.L_fista`.
     *   Acceptance Criteria: CLD object instantiated using shared infrastructure. `W` learned, `WtY` cached. `S_design` validated. `X_hat` initialized. **Demonstrates initialization patterns for Sprint 1 CBD.**
-7.  **Ticket S1a-T07 (Revised): Implement R6 Getter Methods & Shared S3 Interface** 🟢 **[PARTIALLY SHARED]**
+7.  **Ticket S1a-T07 (Revised): Implement R6 Getter Methods & Shared S3 Interface** 🟢 **[GROUP A PARALLEL - AFTER T06]**
     *   Description: Implement getter methods and start shared visualization framework:
         *   `get_spatial_maps()`: Returns `self$.W` with optional `neuroim2::NeuroVol` conversion using shared utilities
         *   `get_activations()`: Returns `self$.X_hat`
@@ -81,7 +132,7 @@
 
 **Theme 3: CLD-Specific Algorithms (FISTA + TV)**
 
-8.  **Ticket S1a-T08 (Revised): Implement `private$.learn_W_via_glm_svd` (Optimized R)**
+8.  **Ticket S1a-T08 (Revised): Implement `private$.learn_W_via_glm_svd` (Optimized R)** 🟢 **[GROUP B PARALLEL - INDEPENDENT FUNCTION]**
     *   Description: This private method takes `Y_input`, `S_design_input`, `hrf_kernel_input`, and `rank_input`.
         1.  **Create Convolved Design Matrix:** Convolve each row of `S_design_input` (K regressors) with `hrf_kernel_input` (using `fmrireg` convolution functions where applicable) to get `X_conv` (`K x T`).
         2.  **Run Voxel-wise GLMs:** For each voxel, run a GLM: `Y_v,: ~ t(X_conv)[,1] + ... + t(X_conv)[,K]`. Collect `K` beta coefficients per voxel into `B` (`V x K`). **Use `speedglm::speedglm.wfit` for GLMs. If `V > 5000`, process voxels in chunks (e.g., using `data.table` or `lapply` over blocks).**
@@ -93,12 +144,12 @@
         *   Handle both standard matrix and `neuroim2::NeuroVec` inputs efficiently, maintaining spatial information when available.
     *   Acceptance Criteria: `self$.W` (a `V x K` matrix of effective rank `r`) is computed and stored. Uses `speedglm` and handles large `V`. Works with neuroimaging data structures and `fmrireg` HRF components.
     *   *Note:* For unsupervised starts if `S_design` is not provided, default to a KxT identity pulse train (K=rank) as `S_design` and document this.
-9.  **Ticket S1a-T09 (Revised): Implement FFT-based Convolution Operator (R, with `stats::convolve` fallback)**
+9.  **Ticket S1a-T09 (Revised): Implement FFT-based Convolution Operator (R, with `stats::convolve` fallback)** 🟢 **[GROUP B PARALLEL - INDEPENDENT FUNCTION]**
     *   Description: Create `convolve_rows_with_hrf(matrix_X, hrf_kernel, use_fft_threshold = 256)`. **If `ncol(matrix_X) > use_fft_threshold`, use `stats::mvfft` for efficient FFT-based convolution. Otherwise, use `apply(matrix_X, 1, function(row) stats::convolve(row, hrf_kernel, conj = FALSE, type = "filter")[1:length(row)])` for direct convolution.** Ensure output dimensions are correct (`K x T`).
         *   Consider integration with `fmrireg` convolution functions for consistency with neuroimaging conventions.
         *   Ensure compatibility when `hrf_kernel` is specified via `fmrireg` HRF basis functions.
     *   Acceptance Criteria: Function performs row-wise convolution, choosing FFT or direct method based on `T`. Compatible with `fmrireg` HRF specifications.
-10. **Ticket S1a-T10: Implement Gradient for FISTA (RcppArmadillo)**
+10. **Ticket S1a-T10: Implement Gradient for FISTA (RcppArmadillo)** 🟢 **[GROUP B PARALLEL - INDEPENDENT RCPP]**
     *   Description: RcppArmadillo function `compute_gradient_fista_rcpp(Y_or_WtY_arg, W_arg, H_star_X_arg, hrf_kernel_arg, precomputed_WtY = FALSE)`.
         *   If `precomputed_WtY` is TRUE, `Y_or_WtY_arg` is `WtY` (K x T).
         *   `H_star_X_arg` is `K x T` matrix `convolve_rows_with_hrf(X_current, hrf_kernel)`.
@@ -112,10 +163,10 @@
         *   **Optimize with in-place Armadillo operations. Pre-compute and cache `crossprod(W_arg)` if used repeatedly.**
         *   Ensure efficient handling when input data originates from `neuroim2` structures (converted to matrices for Rcpp processing).
     *   Acceptance Criteria: Rcpp function computes gradient efficiently, leveraging `WtY` cache. Compatible with neuroimaging data workflows.
-11. **Ticket S1a-T11 (Revised): Implement Proximal Operator for TV Penalty (Condat's Algorithm in Rcpp)**
+11. **Ticket S1a-T11 (Revised): Implement Proximal Operator for TV Penalty (Condat's Algorithm in Rcpp)** 🟢 **[GROUP B PARALLEL - INDEPENDENT RCPP]**
     *   Description: Write an Rcpp function `prox_tv_condat_rcpp(X_tilde_row, lambda_tv_step)` that implements Condat's direct algorithm for the proximal operator of the Total Variation penalty. **This computes `argmin_z {0.5 ||z - X_tilde_row||^2 + lambda_tv_step * TV(z)}` where TV(z) = sum(|z[i] - z[i-1]|).** Source a permissively licensed C/C++ implementation of Condat's algorithm and integrate into Rcpp. This operates row-wise on `X_tilde`.
     *   Acceptance Criteria: Rcpp function applies robust 1D TV proximal step for each row of `X_tilde`. Unit test with ramp+spike input. Performance optimized for neuroimaging time series lengths.
-12. **Ticket S1a-T12 (Revised): Implement `private$.fista_tv` Loop (RcppArmadillo)**
+12. **Ticket S1a-T12 (Revised): Implement `private$.fista_tv` Loop (RcppArmadillo)** 🟢 **[GROUP B PARALLEL - INDEPENDENT RCPP]**
     *   Description: Implement FISTA in RcppArmadillo.
         *   **Lipschitz constant estimation:** 
             - Option 1 (simple): `L = ||W||_F^2` where ||·||_F is Frobenius norm, assuming HRF is normalized.
@@ -127,7 +178,7 @@
         *   Include convergence check based on relative change in objective or X.
         *   Ensure efficient memory usage when working with neuroimaging-sized datasets.
     *   Acceptance Criteria: FISTA loop in Rcpp uses Condat's TV prox and precomputed `L`, `WtY`. Optimized for neuroimaging data scales.
-13. **Ticket S1a-T13 (Revised): Implement R6 `fit` Method (Calls FISTA)** (Enhanced for neuroimaging compatibility)
+13. **Ticket S1a-T13 (Revised): Implement R6 `fit` Method (Calls FISTA)** 🟢 **[GROUP A PARALLEL - AFTER T06]**
     *   Description: Implement the public `fit` method that calls the private FISTA solver.
         *   Ensure method works seamlessly regardless of whether input was standard matrix or `neuroim2` data structure.
         *   Provide progress reporting suitable for neuroimaging analysis workflows (e.g., every 10 iterations).
@@ -136,7 +187,7 @@
 
 **Theme 4: Shared Testing & Validation Infrastructure** 🟢 **[SHARED FOUNDATION]**
 
-14. **Ticket S1a-T14 (Revised): Comprehensive Shared Test Suite** 🟢 **[SHARED FOUNDATION]**
+14. **Ticket S1a-T14 (Revised): Comprehensive Shared Test Suite** 🟢 **[GROUP C PARALLEL - INDEPENDENT FILES]**
     *   Description: Create test infrastructure for both algorithms:
         *   `tests/testthat/test-infrastructure.R`: Test shared utilities (data structures, HRF, simulation)
         *   `tests/testthat/test-cld.R`: CLD-specific algorithm tests
@@ -145,7 +196,7 @@
         *   Test neuroimaging data structure preservation throughout pipelines
         *   Include performance benchmarks for both matrix and `neuroim2` workflows
     *   Acceptance Criteria: Robust shared testing framework. **Ready for Sprint 1 CBD test integration.**
-15. **Ticket S1a-T15 (Revised): Documentation & Package Polish** 🟢 **[SHARED FOUNDATION]**
+15. **Ticket S1a-T15 (Revised): Documentation & Package Polish** 🟢 **[GROUP C PARALLEL - INDEPENDENT FILES]**
     *   Description: Complete documentation emphasizing shared infrastructure:
         *   Roxygen2 documentation for all shared utilities and CLD-specific functions
         *   **🔄 Create shared vignette framework:** `vignettes/getting-started.Rmd` structure for both algorithms
@@ -156,7 +207,7 @@
 
 **Theme 5: Low-Effort Adds & Risk Mitigation**
 
-16. **Ticket S1a-T16: Add Performance Benchmark Suite**
+16. **Ticket S1a-T16: Add Performance Benchmark Suite** 🟢 **[GROUP D PARALLEL - INDEPENDENT DIRECTORY]**
     *   Description: Create benchmark script `inst/benchmarks/cld_performance.R`:
         *   Use `microbenchmark` to time key operations (W learning, FISTA iterations).
         *   Test across different problem sizes: (V,T,K) = {(1000,200,3), (5000,500,5), (20000,300,4)}.
@@ -166,7 +217,7 @@
         *   Benchmark performance with both standard matrices and `neuroim2` data structures.
         *   Include timing comparisons for different data input types and sizes typical of neuroimaging.
     *   Acceptance Criteria: Basic benchmark script available for both data structure types and neuroimaging-relevant scales.
-17. **Ticket S1a-T17: Add Visualization Methods**
+17. **Ticket S1a-T17: Add Visualization Methods** 🟢 **[GROUP D PARALLEL - INDEPENDENT DIRECTORY]**
     *   Description: Implement visualization methods:
         *   `plot.ContinuousLinearDecoder()`: Creates multi-panel plot showing predicted states over time.
         *   `plot_spatial_maps()`: Visualizes learned W as brain maps when neuroimaging data is used.
@@ -175,7 +226,7 @@
         *   When spatial information is available, provide basic spatial map visualization using `neuroim2` capabilities.
         *   Include HRF visualization using `fmrireg` plotting conventions where applicable.
     *   Acceptance Criteria: Simple plot method available with neuroimaging-appropriate visualizations.
-18. **Ticket S1a-T18: Robustness Testing and Edge Cases**
+18. **Ticket S1a-T18: Robustness Testing and Edge Cases** 🟢 **[GROUP C PARALLEL - INDEPENDENT FILES]**
     *   Description: Create comprehensive test suite for edge cases:
         *   **Condat TV prox tests:** 
             - Constant signal (should be unchanged)
