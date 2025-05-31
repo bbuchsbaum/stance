@@ -43,7 +43,6 @@ arma::vec prox_tv_condat_1d(const arma::vec& x, double lambda) {
   }
   
   // Condat's algorithm implementation
-  arma::vec y = x;
   arma::vec z(n);
   
   // Working variables
@@ -167,15 +166,7 @@ double compute_tv_rcpp(const arma::mat& X) {
     stop("Input matrix contains NaN or Inf values");
   }
   
-  double tv = 0.0;
-  
-  for (int k = 0; k < X.n_rows; k++) {
-    for (int t = 1; t < X.n_cols; t++) {
-      tv += std::abs(X(k, t) - X(k, t-1));
-    }
-  }
-  
-  return tv;
+  return arma::accu(arma::abs(arma::diff(X, 1, 1)));
 }
 
 //' Alternative TV Proximal Operator using Dual Method
@@ -192,11 +183,33 @@ double compute_tv_rcpp(const arma::mat& X) {
 //' 
 //' @keywords internal
 // [[Rcpp::export]]
-arma::vec prox_tv_dual(const arma::vec& x, double lambda, 
+arma::vec prox_tv_dual(const arma::vec& x, double lambda,
                        int max_iter = 100, double tol = 1e-8) {
+  if (x.is_empty()) {
+    stop("Input vector cannot be empty");
+  }
+
   int n = x.n_elem;
+
   
   if (n <= 2 || lambda <= 0) {
+
+
+  if (x.has_nan() || x.has_inf()) {
+    stop("Input vector contains NaN or Inf values");
+  }
+  if (!std::isfinite(lambda) || lambda < 0) {
+    stop("lambda must be non-negative and finite");
+  }
+  if (max_iter <= 0) {
+    stop("max_iter must be positive");
+  }
+  if (!std::isfinite(tol) || tol <= 0) {
+    stop("tol must be positive and finite");
+  }
+
+  if (n <= 1 || lambda == 0) {
+
     return x;
   }
   
