@@ -167,15 +167,7 @@ double compute_tv_rcpp(const arma::mat& X) {
     stop("Input matrix contains NaN or Inf values");
   }
   
-  double tv = 0.0;
-  
-  for (int k = 0; k < X.n_rows; k++) {
-    for (int t = 1; t < X.n_cols; t++) {
-      tv += std::abs(X(k, t) - X(k, t-1));
-    }
-  }
-  
-  return tv;
+  return arma::accu(arma::abs(arma::diff(X, 1, 1)));
 }
 
 //' Alternative TV Proximal Operator using Dual Method
