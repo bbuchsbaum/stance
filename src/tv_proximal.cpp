@@ -47,7 +47,6 @@ arma::vec prox_tv_condat_1d(const arma::vec& x, double lambda) {
   }
   
   // Condat's algorithm implementation
-  arma::vec y = x;
   arma::vec z(n);
   
   // Working variables

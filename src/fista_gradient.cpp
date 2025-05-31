@@ -8,9 +8,16 @@
 using namespace Rcpp;
 using namespace arma;
 
+
 // Forward declaration for transposed convolution helper
 arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf,
                                   int n_threads = 0);
+
+arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
+                                              const arma::mat& WtW,
+                                              const arma::mat& H_star_X,
+                                              const arma::vec& hrf_kernel);
+
 
 //' Compute FISTA Gradient for CLD
 //' 
@@ -72,30 +79,69 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
     // Full computation: Grad_term = W'(Y - W * H_star_X)
     // Residual = Y - W * H_star_X
     arma::mat Residual = Y_or_WtY - W * H_star_X;
-    
+
     // Grad_term = W' * Residual
     Grad_term = W.t() * Residual;
-    
+
+    // Apply transposed convolution with time-reversed HRF
+    arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel);
+    return -Grad_L2;
+
   } else {
     // Efficient computation using pre-computed WtY
-    // Use provided WtW if available to avoid recomputation
     arma::mat WtW;
     if (WtW_precomp.is_empty()) {
       WtW = W.t() * W;
     } else {
       WtW = WtW_precomp;
     }
-    arma::mat WtW_H_star_X = WtW * H_star_X;
 
-    // Grad_term = WtY - WtW * H_star_X
-    Grad_term = Y_or_WtY - WtW_H_star_X;
+    // Delegate to the simplified pre-computed interface
+    return compute_gradient_fista_precomp_rcpp(Y_or_WtY, WtW,
+                                               H_star_X, hrf_kernel);
   }
-  
+}
+
+//' Compute FISTA Gradient with Pre-computed Terms
+//'
+//' Simplified version of \code{compute_gradient_fista_rcpp} that operates
+//' directly on pre-computed \eqn{W'Y} and \eqn{W'W} matrices.
+//'
+//' @param WtY Pre-computed \eqn{W'Y} matrix (K x T)
+//' @param WtW Pre-computed \eqn{W'W} matrix (K x K)
+//' @param H_star_X Convolved states matrix (K x T)
+//' @param hrf_kernel HRF kernel vector
+//'
+//' @return Gradient matrix (K x T)
+//'
+//' @export
+// [[Rcpp::export]]
+arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
+                                              const arma::mat& WtW,
+                                              const arma::mat& H_star_X,
+                                              const arma::vec& hrf_kernel) {
+  // Input validation
+  if (WtY.is_empty() || WtW.is_empty() || H_star_X.is_empty() ||
+      hrf_kernel.is_empty()) {
+    stop("Input matrices/vectors cannot be empty");
+  }
+
+  if (WtY.n_rows != WtW.n_rows || WtW.n_rows != WtW.n_cols) {
+    stop("Dimension mismatch between WtY and WtW");
+  }
+  if (WtY.n_rows != H_star_X.n_rows || WtY.n_cols != H_star_X.n_cols) {
+    stop("Dimension mismatch between inputs");
+  }
+
+  // Gradient term in measurement space
+  arma::mat Grad_term = WtY - WtW * H_star_X;
+
   // Apply transposed convolution with time-reversed HRF
+
   // This is the gradient with respect to X (before convolution)
   arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, 0);
   
-  // Return negative gradient (since we minimize)
+
   return -Grad_L2;
 }
 

@@ -77,6 +77,10 @@ test_that("HRF utilities handle edge cases", {
   # Zero HRF
   hrf_zero <- rep(0, 16)
   expect_error(setup_hrf_kernel(hrf_zero), "is all zeros")
+
+  # Non-finite HRF
+  hrf_na <- c(0.2, NA, 0.3)
+  expect_error(setup_hrf_kernel(hrf_na), "non-finite values")
   
   # Single point HRF
   hrf_single <- 1
