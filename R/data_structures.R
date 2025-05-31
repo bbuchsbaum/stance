@@ -71,8 +71,14 @@ validate_fmri_input <- function(Y, expected_dims = NULL, check_finite = TRUE, ve
   # Handle data.frame that can be converted
   } else if (is.data.frame(Y)) {
     result$type <- "data.frame"
-    result$data <- as.matrix(Y)
-    if (verbose) message("Converted data.frame to matrix")
+    # ensure all columns are numeric before conversion
+    non_numeric_cols <- !vapply(Y, is.numeric, logical(1))
+    if (any(non_numeric_cols)) {
+      stop("data.frame contains non-numeric columns: ",
+           paste(names(Y)[non_numeric_cols], collapse = ", "))
+    }
+    result$data <- as.matrix(Y, mode = "numeric")
+    if (verbose) message("Converted data.frame to numeric matrix")
     
   } else {
     stop("Input must be a matrix, NeuroVec, or convertible data.frame")
@@ -93,9 +99,10 @@ validate_fmri_input <- function(Y, expected_dims = NULL, check_finite = TRUE, ve
   
   # Check for finite values
   if (check_finite) {
-    if (!all(is.finite(result$data))) {
-      n_na <- sum(is.na(result$data))
-      n_inf <- sum(is.infinite(result$data))
+    non_finite <- !is.finite(result$data)
+    if (any(non_finite)) {
+      n_na <- sum(is.na(result$data[non_finite]))
+      n_inf <- sum(is.infinite(result$data[non_finite]))
       stop(sprintf("Data contains non-finite values: %d NA, %d Inf/-Inf", n_na, n_inf))
     }
   }
@@ -117,13 +124,18 @@ validate_fmri_input <- function(Y, expected_dims = NULL, check_finite = TRUE, ve
 #' @param obj NeuroVec, NeuroVol, or list of neuroimaging objects
 #' @param flatten_space Logical, whether to flatten spatial dimensions (default TRUE)
 #' @param preserve_attributes Logical, whether to preserve object attributes (default TRUE)
+#' @param force_matrix Logical, if TRUE always return a matrix by flattening
+#'   3-D data (default FALSE)
 #' 
 #' @return A list with components:
-#'   \item{data}{Numeric matrix}
+#'   \item{data}{Numeric matrix. If \code{flatten_space = FALSE} and
+#'     \code{force_matrix = FALSE} for 3-D input, a 3-D array is returned}
 #'   \item{metadata}{List of preserved metadata for reconstruction}
 #' 
 #' @export
-extract_data_matrix <- function(obj, flatten_space = TRUE, preserve_attributes = TRUE) {
+extract_data_matrix <- function(obj, flatten_space = TRUE,
+                                preserve_attributes = TRUE,
+                                force_matrix = FALSE) {
   metadata <- list()
   
   # NeuroVec (4D: space x time)
@@ -138,7 +150,7 @@ extract_data_matrix <- function(obj, flatten_space = TRUE, preserve_attributes =
     
   # NeuroVol (3D: space only)
   } else if (inherits(obj, "NeuroVol")) {
-    if (flatten_space) {
+    if (flatten_space || force_matrix) {
       data <- matrix(as.vector(obj), ncol = 1)
       metadata$original_dim <- dim(obj)
     } else {
@@ -168,7 +180,12 @@ extract_data_matrix <- function(obj, flatten_space = TRUE, preserve_attributes =
   } else {
     stop("Unsupported object type: ", paste(class(obj), collapse = ", "))
   }
-  
+
+  if (force_matrix && !is.matrix(data)) {
+    metadata$original_dim <- dim(data)
+    data <- matrix(as.vector(data), ncol = 1)
+  }
+
   list(data = data, metadata = metadata)
 }
 
@@ -203,6 +220,28 @@ restore_spatial_structure <- function(mat, reference, output_type = c("temporal"
     stop("Cannot extract spatial information from reference")
   }
   
+  # Determine expected voxel count from mask or space
+  expected_voxels <- NULL
+  if (!is.null(mask)) {
+    expected_voxels <- sum(mask)
+  } else {
+    space_dim <- try(neuroim2::dim(space_obj), silent = TRUE)
+    if (!inherits(space_dim, "try-error")) {
+      if (length(space_dim) > 3) {
+        expected_voxels <- prod(space_dim[1:3])
+      } else {
+        expected_voxels <- prod(space_dim)
+      }
+    }
+  }
+
+  if (!is.null(expected_voxels) && nrow(mat) != expected_voxels) {
+    stop(sprintf(
+      "Matrix has %d rows but spatial reference implies %d voxels",
+      nrow(mat), expected_voxels
+    ))
+  }
+
   # Restore based on output type
   if (output_type == "temporal") {
     # Time series data (V x T)

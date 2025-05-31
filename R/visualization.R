@@ -21,8 +21,8 @@ NULL
 #' 
 #' @return Invisible NULL, plots are displayed
 #' @export
-#' @importFrom graphics par image layout
-plot_spatial_maps <- function(W, layout = NULL, zlim = NULL, 
+#' @importFrom graphics par image
+plot_spatial_maps <- function(W, layout = NULL, zlim = NULL,
                               col = heat.colors(100), titles = NULL, mask = NULL) {
   # Handle NeuroVol input
   if (is.list(W) && all(sapply(W, inherits, "NeuroVol"))) {
@@ -57,11 +57,22 @@ plot_spatial_maps <- function(W, layout = NULL, zlim = NULL,
     zlim <- range(W_mat, na.rm = TRUE)
   }
   
+  # Compute matrix dimensions once
+  dims <- try_reshape_vector(V)
+
   # Plot each spatial map
   for (k in 1:K) {
-    # Try to reshape to approximate square
+
+    # Try to reshape to approximate square; pad if necessary
     dims <- try_reshape_vector(V)
-    map_matrix <- matrix(W_mat[, k], dims[1], dims[2])
+    map_vals <- W_mat[, k]
+    total <- prod(dims)
+    if (total > length(map_vals)) {
+      map_vals <- c(map_vals, rep(NA, total - length(map_vals)))
+    }
+    map_matrix <- matrix(map_vals, dims[1], dims[2])
+
+
     
     image(map_matrix, zlim = zlim, col = col, axes = FALSE,
           main = if (!is.null(titles)) titles[k] else paste("State", k))
@@ -168,9 +179,12 @@ plot_convergence <- function(values, type = c("objective", "elbo"),
   }
   
   n_iter <- length(values)
-  
+
   # Set up plot
   ylab <- if (type == "objective") "Objective Value" else "ELBO"
+
+  label_y <- if (log_scale && all(values > 0))
+    log(mean(range(values))) else mean(range(values))
   
   if (log_scale && all(values > 0)) {
     plot(1:n_iter, log(values), type = "l", 
@@ -183,7 +197,7 @@ plot_convergence <- function(values, type = c("objective", "elbo"),
   # Highlight convergence point
   if (!is.null(highlight_converged) && highlight_converged <= n_iter) {
     abline(v = highlight_converged, col = "red", lty = 2)
-    text(highlight_converged, mean(range(values)), "Converged", 
+    text(highlight_converged, label_y, "Converged",
          col = "red", pos = 4)
   }
   
@@ -234,16 +248,25 @@ plot_hrf <- function(hrf, TR = 2, col = NULL, main = "HRF", ...) {
 #' @keywords internal
 try_reshape_vector <- function(n) {
   sqrt_n <- sqrt(n)
-  if (sqrt_n == floor(sqrt_n)) {
-    return(c(sqrt_n, sqrt_n))
+
+  best_dims <- c(1, n)
+  best_diff <- Inf
+  best_area <- Inf
+
+  for (r in 1:ceiling(sqrt_n)) {
+    c <- ceiling(n / r)
+    dims <- sort(c(r, c))
+    diff <- dims[2] - dims[1]
+    area <- prod(dims)
+
+    if (diff < best_diff || (diff == best_diff && area < best_area)) {
+      best_diff <- diff
+      best_area <- area
+      best_dims <- dims
+    }
   }
-  
-  # Find factors closest to square root
-  factors <- which(n %% 1:n == 0)
-  diffs <- abs(factors - sqrt_n)
-  best_factor <- factors[which.min(diffs)]
-  
-  c(best_factor, n / best_factor)
+
+  best_dims
 }
 
 #' Create Diagnostic Plot Panel
@@ -262,7 +285,7 @@ plot_diagnostics <- function(decoder_output, which = 1:4, ...) {
   
   n_plots <- length(which)
   layout_matrix <- matrix(c(1:n_plots, rep(0, 4-n_plots)), 2, 2, byrow = TRUE)
-  layout(layout_matrix)
+  graphics::layout(layout_matrix)
   
   for (i in which) {
     if (i == 1 && !is.null(decoder_output$W)) {
@@ -281,4 +304,67 @@ plot_diagnostics <- function(decoder_output, which = 1:4, ...) {
   }
   
   invisible(NULL)
+}
+#' Generate QC Report
+#'
+#' Creates a simple HTML quality control report summarizing decoder results.
+#'
+#' @param decoder A \code{ContinuousBayesianDecoder} object.
+#' @param output_file Path to the HTML report to generate.
+#'
+#' @return Invisibly returns the path to \code{output_file}.
+#' @export
+qc_report <- function(decoder, output_file) {
+  if (!inherits(decoder, "ContinuousBayesianDecoder")) {
+    stop("decoder must be a ContinuousBayesianDecoder")
+  }
+
+  out_dir <- dirname(output_file)
+  if (!dir.exists(out_dir)) {
+    dir.create(out_dir, recursive = TRUE)
+  }
+
+  tmpdir <- tempfile("qc", tmpdir = out_dir)
+  dir.create(tmpdir)
+
+  # ELBO history plot
+  elbo_file <- file.path(tmpdir, "elbo.png")
+  grDevices::png(elbo_file, width = 800, height = 600)
+  conv <- decoder$get_convergence()
+  plot_convergence(conv$elbo_history, type = "elbo")
+  grDevices::dev.off()
+
+  # Spatial maps
+  maps_file <- file.path(tmpdir, "spatial_maps.png")
+  grDevices::png(maps_file, width = 800, height = 600)
+  plot_spatial_maps(decoder$get_spatial_maps(as_neurovol = FALSE))
+  grDevices::dev.off()
+
+  # State probabilities
+  state_file <- file.path(tmpdir, "state_probs.png")
+  grDevices::png(state_file, width = 800, height = 600)
+  plot_state_timecourse(decoder$get_state_sequence())
+  grDevices::dev.off()
+
+  # Copy images next to output_file
+  file.copy(c(elbo_file, maps_file, state_file), out_dir, overwrite = TRUE)
+  elbo_img <- basename(elbo_file)
+  maps_img <- basename(maps_file)
+  state_img <- basename(state_file)
+
+  html <- paste0(
+    "<html><head><title>QC Report</title></head><body>",
+    "<h1>QC Report</h1>",
+    "<h2>ELBO History</h2>",
+    "<img src='", elbo_img, "' />",
+    "<h2>Spatial Maps</h2>",
+    "<img src='", maps_img, "' />",
+    "<h2>State Probabilities</h2>",
+    "<img src='", state_img, "' />",
+    "</body></html>")
+
+  writeLines(html, output_file)
+  unlink(tmpdir, recursive = TRUE)
+  message("QC report written to ", output_file)
+  invisible(output_file)
 }
