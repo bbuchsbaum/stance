@@ -336,24 +336,19 @@ hrf_convolution_matrix <- function(hrf, n_time, sparse = TRUE) {
   n_hrf <- length(hrf)
   
   if (sparse) {
-    # Create sparse Toeplitz matrix
-    # First column: [hrf, zeros]
-    # First row: [hrf[1], zeros]
-    i <- rep(1:n_time, each = n_hrf)
-    j <- unlist(lapply(1:n_time, function(t) {
-      idx <- (t - n_hrf + 1):t
-      idx[idx > 0 & idx <= n_time]
-    }))
-    x <- rep(rev(hrf), n_time)[seq_along(j)]
-    
-    # Remove entries where j would be out of bounds
-    valid <- j > 0 & j <= n_time
-    
-    Matrix::sparseMatrix(
-      i = i[valid],
-      j = j[valid],
-      x = x[valid],
-      dims = c(n_time, n_time)
+    # Create sparse Toeplitz matrix using banded representation
+    # Only use HRF elements that fit within the time series length
+    p <- min(n_hrf, n_time)
+    diags <- lapply(seq_len(p), function(k) {
+      rep(hrf[k], n_time - (k - 1))
+    })
+
+    Matrix::bandSparse(
+      n = n_time,
+      m = n_time,
+      k = -(0:(p - 1)),
+      diagonals = diags,
+      symmetric = FALSE
     )
   } else {
     # Dense Toeplitz matrix
