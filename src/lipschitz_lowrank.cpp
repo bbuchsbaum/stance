@@ -114,10 +114,6 @@ arma::mat compute_WtW_lowrank_rcpp(const arma::mat& V,
 
   // W'W = V * diag(S^2) * V'
 
-  // Scale columns of V by S
-  arma::mat V_scaled = V;
-  for (int i = 0; i < S.n_elem; i++)
-    V_scaled.col(i) *= S(i);
 
   // Input validation
   if (V.is_empty() || S.is_empty()) {
