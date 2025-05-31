@@ -55,7 +55,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
       # Input validation and data structure handling
       private$.validate_inputs(Y, K, r, hrf_basis)
       private$.setup_data_structures(Y)
-      private$.setup_hrf_basis(hrf_basis)
+      private$.setup_hrf_kernel(hrf_basis)
       
       # Store parameters
       private$.K <- K
@@ -108,9 +108,9 @@ ContinuousBayesianDecoder <- R6::R6Class(
     #' @description Get estimated spatial maps
     #' @param as_neurovol Return as neuroim2::NeuroVol if possible
     get_spatial_maps = function(as_neurovol = TRUE) {
-      W <- private$.U %*% t(private$.V_coef)
+      W <- private$.U %*% t(private$.V)
       
-      if (as_neurovol && !is.null(private$.original_space)) {
+      if (as_neurovol && !is.null(private$.neuro_metadata)) {
         return(private$.convert_to_neurovol(W))
       }
       
@@ -120,6 +120,34 @@ ContinuousBayesianDecoder <- R6::R6Class(
     #' @description Get estimated state sequence
     get_state_sequence = function() {
       return(private$.S_gamma)
+    },
+
+    #' @description Get state posteriors
+    get_state_posteriors = function() {
+      private$.S_gamma
+    },
+
+    #' @description Get model parameters as a list
+    get_parameters = function() {
+      list(
+        U = private$.U,
+        V = private$.V,
+        Pi = private$.Pi,
+        pi0 = private$.pi0,
+        sigma2 = private$.sigma2,
+        H_v = private$.H_v
+      )
+    },
+
+    #' @description Predict reconstructed data
+    predict = function() {
+      W <- private$.U %*% t(private$.V)
+      W %*% private$.S_gamma
+    },
+
+    #' @description Plot ELBO convergence
+    plot_convergence = function(...) {
+      plot_convergence(private$.elbo_history, type = "elbo", ...)
     },
     
     #' @description Get estimated HRF parameters
@@ -147,22 +175,22 @@ ContinuousBayesianDecoder <- R6::R6Class(
   private = list(
     
     # Data and parameters
-    .Y_original = NULL,           # Original input data
-    .Y = NULL,                    # Working data matrix (V x T)
-    .original_space = NULL,       # neuroim2 space information
+    .Y_data = NULL,           # Working data matrix (V x T)
+    .neuro_metadata = NULL,       # neuroim2 space information
+    .Y_proj = NULL,            # U^T Y projection
     .n_voxels = NULL,             # Number of voxels
     .T = NULL,                    # Number of timepoints
     .K = NULL,                    # Number of states
     .r = NULL,                    # Spatial rank
     
     # HRF components
-    .hrf_basis = NULL,            # HRF basis matrix
+    .hrf_kernel = NULL,            # HRF basis matrix
     .L_hrf = NULL,                # HRF basis length
     .L_basis = NULL,              # Number of basis functions
     
     # Model parameters
     .U = NULL,                    # Spatial basis (V x r)
-    .V_coef = NULL,               # State coefficients (K x r)
+    .V = NULL,               # State coefficients (K x r)
     .H_v = NULL,                  # HRF coefficients (V x L_basis)
     .Pi = NULL,                   # Transition matrix (K x K)
     .pi0 = NULL,                  # Initial state probabilities
@@ -214,43 +242,44 @@ ContinuousBayesianDecoder <- R6::R6Class(
     
     # Setup data structures
     .setup_data_structures = function(Y) {
-      private$.Y_original <- Y
+      private$.Y_data <- Y
       
       if (inherits(Y, "NeuroVec")) {
-        private$.original_space <- space(Y)
-        private$.Y <- as.matrix(Y)
+        private$.neuro_metadata <- space(Y)
+        private$.Y_data <- as.matrix(Y)
       } else {
-        private$.Y <- as.matrix(Y)
-        private$.original_space <- NULL
+        private$.Y_data <- as.matrix(Y)
+        private$.neuro_metadata <- NULL
       }
       
-      private$.n_voxels <- nrow(private$.Y)
-      private$.T <- ncol(private$.Y)
+      private$.n_voxels <- nrow(private$.Y_data)
+      private$.T <- ncol(private$.Y_data)
     },
     
     # Setup HRF basis using fmrireg
-    .setup_hrf_basis = function(hrf_basis) {
+    .setup_hrf_kernel = function(hrf_basis) {
       if (is.character(hrf_basis)) {
         # Use fmrireg to create basis
-        private$.hrf_basis <- create_hrf_basis_neuroim2(
+        private$.hrf_kernel <- create_hrf_basis_neuroim2(
           type = hrf_basis,
           TR = 2.0,  # Default TR, should be configurable
           duration = 32.0
         )
       } else {
-        private$.hrf_basis <- hrf_basis
+        private$.hrf_kernel <- hrf_basis
       }
       
-      private$.L_hrf <- nrow(private$.hrf_basis)
-      private$.L_basis <- ncol(private$.hrf_basis)
+      private$.L_hrf <- nrow(private$.hrf_kernel)
+      private$.L_basis <- ncol(private$.hrf_kernel)
     },
     
     # Initialize model parameters
     .initialize_parameters = function() {
       # Initialize spatial components via SVD
-      Y_svd <- svd(private$.Y, nu = private$.r, nv = 0)
+      Y_svd <- svd(private$.Y_data, nu = private$.r, nv = 0)
       private$.U <- Y_svd$u
-      private$.V_coef <- matrix(rnorm(private$.K * private$.r), private$.K, private$.r)
+      private$.V <- matrix(rnorm(private$.K * private$.r), private$.K, private$.r)
+      private$.Y_proj <- crossprod(private$.U, private$.Y_data)
       
       # Initialize HRF coefficients with least squares
       private$.H_v <- matrix(0, private$.n_voxels, private$.L_basis)
@@ -263,7 +292,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
       private$.pi0 <- rep(1/private$.K, private$.K)
       
       # Initialize noise variance
-      private$.sigma2 <- var(as.vector(private$.Y)) * 0.1
+      private$.sigma2 <- var(as.vector(private$.Y_data)) * 0.1
       
       # Initialize variational parameters
       private$.S_gamma <- matrix(1/private$.K, private$.K, private$.T)
@@ -272,9 +301,9 @@ ContinuousBayesianDecoder <- R6::R6Class(
     
     # Setup GMRF structure
     .setup_gmrf_structure = function() {
-      if (!is.null(private$.original_space)) {
+      if (!is.null(private$.neuro_metadata)) {
         # Use neuroim2 spatial structure
-        private$.L_gmrf <- create_gmrf_laplacian_neuroim2(private$.original_space, private$.n_voxels)
+        private$.L_gmrf <- create_gmrf_laplacian_neuroim2(private$.neuro_metadata, private$.n_voxels)
       } else {
         # Create simple chain graph for matrix input
         private$.L_gmrf <- create_chain_laplacian(private$.n_voxels)
@@ -318,11 +347,11 @@ ContinuousBayesianDecoder <- R6::R6Class(
       if (private$.engine == "cpp") {
         # Use Rcpp implementation
         result <- forward_backward_cpp(
-          Y = private$.Y,
+          Y = private$.Y_data,
           U = private$.U,
-          V = private$.V_coef,
+          V = private$.V,
           H_v = private$.H_v,
-          hrf_basis = private$.hrf_basis,
+          hrf_basis = private$.hrf_kernel,
           Pi = private$.Pi,
           pi0 = private$.pi0,
           sigma2 = private$.sigma2
@@ -372,16 +401,41 @@ ContinuousBayesianDecoder <- R6::R6Class(
     .update_noise_variance = function() {
       # TODO: Implement noise variance updates
     },
-    
+
     # Compute ELBO
     .compute_elbo = function() {
       # TODO: Implement ELBO calculation
       return(0)
     },
+
+    # Compute log likelihoods for each state/time
+    .compute_log_likelihoods = function() {
+      stop("Not implemented")
+    },
+
+    # Forward-backward algorithm wrapper
+    .forward_backward = function(log_lik) {
+      stop("Not implemented")
+    },
+
+    # Update U and V factors
+    .update_U_V = function() {
+      private$.update_spatial_components()
+    },
+
+    # Update transition matrix
+    .update_Pi = function() {
+      private$.update_hmm_parameters()
+    },
+
+    # Update noise variance (alias)
+    .update_sigma2 = function() {
+      private$.update_noise_variance()
+    },
     
     # Convert results back to neuroim2 format
     .convert_to_neurovol = function(data) {
-      if (is.null(private$.original_space)) {
+      if (is.null(private$.neuro_metadata)) {
         return(data)
       }
       
