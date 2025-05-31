@@ -246,10 +246,8 @@ update_spatial_components <- function(Y, S_gamma, H_v, hrf_basis,
 #' @keywords internal
 update_hrf_coefficients <- function(Y, S_gamma, U, V, hrf_basis, L_gmrf,
                                    lambda_H_prior, sigma2, engine = "cpp") {
-  if (engine == "cpp" && exists("update_hrf_coefficients_gmrf_cpp")) {
-    return(update_hrf_coefficients_gmrf_cpp(
-      Y, S_gamma, U, V, hrf_basis, L_gmrf, lambda_H_prior, sigma2
-    ))
+  if (engine == "cpp" && exists("update_hrf_coefficients_batched_cpp")) {
+    return(update_hrf_coefficients_batched_cpp(Y, hrf_basis))
   }
   update_hrf_coefficients_r(Y, S_gamma, U, V, hrf_basis,
                             L_gmrf, lambda_H_prior, sigma2)
