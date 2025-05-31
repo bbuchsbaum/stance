@@ -71,8 +71,14 @@ validate_fmri_input <- function(Y, expected_dims = NULL, check_finite = TRUE, ve
   # Handle data.frame that can be converted
   } else if (is.data.frame(Y)) {
     result$type <- "data.frame"
-    result$data <- as.matrix(Y)
-    if (verbose) message("Converted data.frame to matrix")
+    # ensure all columns are numeric before conversion
+    non_numeric_cols <- !vapply(Y, is.numeric, logical(1))
+    if (any(non_numeric_cols)) {
+      stop("data.frame contains non-numeric columns: ",
+           paste(names(Y)[non_numeric_cols], collapse = ", "))
+    }
+    result$data <- as.matrix(Y, mode = "numeric")
+    if (verbose) message("Converted data.frame to numeric matrix")
     
   } else {
     stop("Input must be a matrix, NeuroVec, or convertible data.frame")
