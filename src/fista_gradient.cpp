@@ -4,6 +4,9 @@
 using namespace Rcpp;
 using namespace arma;
 
+// Forward declaration for transposed convolution helper
+arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf);
+
 //' Compute FISTA Gradient for CLD
 //' 
 //' Computes the gradient of the least squares term for FISTA optimization.
