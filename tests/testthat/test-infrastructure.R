@@ -86,6 +86,7 @@ test_that("visualization functions handle various inputs", {
     plot_spatial_maps(W)
     plot_state_timecourse(X)
     plot_convergence(c(100, 90, 80, 75, 74, 73))
+    plot_convergence(seq(1, 0.1, length.out = 10), type = "elbo")
     dev.off()
   })
 })

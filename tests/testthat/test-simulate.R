@@ -25,6 +25,11 @@ test_that("simulate_fmri_data works for CBD", {
   # Check output structure
   expect_equal(dim(sim$Y), c(100, 50))
   expect_equal(dim(sim$S), c(3, 50))
+
+  # Transition matrix and initial probs returned
+  expect_true(is.matrix(sim$Pi))
+  expect_equal(dim(sim$Pi), c(3, 3))
+  expect_equal(length(sim$pi0), 3)
   
   # Check CBD-specific: one-hot encoded states
   expect_true(all(sim$S %in% c(0, 1)))  # Binary values only
@@ -97,8 +102,9 @@ test_that("neuroimaging output format works", {
 
 test_that("generate_markov_states produces valid chains", {
   # Test Markov state generation
-  states <- stance:::generate_markov_states(K = 3, T = 100)
-  
+  res <- stance:::generate_markov_states(K = 3, T = 100)
+  states <- res$S
+
   # Check dimensions and one-hot encoding
   expect_equal(dim(states), c(3, 100))
   expect_true(all(states %in% c(0, 1)))
@@ -108,12 +114,20 @@ test_that("generate_markov_states produces valid chains", {
   trans_mat <- matrix(c(0.8, 0.1, 0.1,
                         0.2, 0.7, 0.1,
                         0.1, 0.2, 0.7), 3, 3, byrow = TRUE)
-  states2 <- stance:::generate_markov_states(K = 3, T = 1000, trans_mat)
+  states2 <- stance:::generate_markov_states(K = 3, T = 1000, trans_mat)$S
   
   # Should have more self-transitions due to diagonal dominance
   state_seq <- apply(states2, 2, which.max)
   transitions <- sum(diff(state_seq) != 0)
   expect_true(transitions < 500)  # Fewer than half should be transitions
+
+  # Custom initial probabilities
+  res_pi <- stance:::generate_markov_states(K = 3, T = 50,
+                                            transition_matrix = trans_mat,
+                                            pi0 = c(0.9, 0.05, 0.05))
+  expect_equal(sum(res_pi$pi0), 1)
+  expect_equal(length(res_pi$pi0), 3)
+  expect_equal(colSums(res_pi$S), rep(1, 50))
 })
 
 test_that("generate_continuous_states produces valid activations", {
