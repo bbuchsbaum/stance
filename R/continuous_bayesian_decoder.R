@@ -83,6 +83,9 @@ ContinuousBayesianDecoder <- R6::R6Class(
         save_history = TRUE
       )
 
+      private$.iterations <- 0
+      private$.fitted <- FALSE
+      
       invisible(self)
     },
     
@@ -90,25 +93,55 @@ ContinuousBayesianDecoder <- R6::R6Class(
     #' @param max_iter Maximum number of iterations
     #' @param tol Convergence tolerance for ELBO
     #' @param verbose Print progress information
-    fit = function(max_iter = 100, tol = 1e-6, verbose = TRUE) {
+    #' @param save_history Logical, keep full ELBO history
+    fit = function(max_iter = 100, tol = 1e-4, verbose = TRUE,
+                   save_history = FALSE) {
       private$.config$max_iter <- max_iter
       private$.config$tol <- tol
       private$.config$verbose <- verbose
-      
+
+      private$.elbo_history <- numeric()
+      private$.converged <- FALSE
+      private$.iterations <- 0
+
       if (verbose) {
         cat("Fitting Continuous Bayesian Decoder...\n")
         cat(sprintf("Data: %d voxels x %d timepoints\n", private$.n_voxels, private$.T))
         cat(sprintf("Model: K=%d states, r=%d rank\n", private$.K, private$.r))
         cat(sprintf("Engine: %s\n", private$.engine))
       }
-      
-      # Main VB loop
-      private$.fit_vb()
-      
+
       if (verbose) {
-        cat("Fitting completed successfully!\n")
+        pb <- cli::cli_progress_bar(total = max_iter)
       }
-      
+
+      for (iter in seq_len(max_iter)) {
+        log_lik <- private$.compute_log_likelihoods()
+        private$.forward_backward(log_lik)
+
+        private$.update_Pi()
+        private$.update_U_V()
+        private$.update_sigma2()
+
+        elbo <- private$.compute_elbo()
+        converged <- private$.check_convergence(elbo, tol)
+        if (!save_history) {
+          private$.elbo_history <- tail(private$.elbo_history, 2)
+        }
+        if (converged) {
+          private$.converged <- TRUE
+          private$.iterations <- iter
+          break
+        }
+
+        if (verbose) cli::cli_progress_update()
+        private$.iterations <- iter
+      }
+
+      if (verbose) cli::cli_progress_done()
+
+      private$.fitted <- TRUE
+
       invisible(self)
     },
     
@@ -167,7 +200,8 @@ ContinuousBayesianDecoder <- R6::R6Class(
       list(
         converged = private$.converged,
         elbo_history = private$.elbo_history,
-        final_elbo = tail(private$.elbo_history, 1)
+        final_elbo = tail(private$.elbo_history, 1),
+        iterations = private$.iterations
       )
     },
     
@@ -219,6 +253,8 @@ ContinuousBayesianDecoder <- R6::R6Class(
     # Convergence tracking
     .converged = FALSE,
     .elbo_history = NULL,
+    .iterations = 0,
+    .fitted = FALSE,
     
     # Input validation
     .validate_inputs = function(Y, K, r, hrf_basis) {
@@ -587,6 +623,18 @@ ContinuousBayesianDecoder <- R6::R6Class(
       private$.S_xi <- xi
 
       return(list(gamma = gamma, xi = xi, log_likelihood = log_likelihood))
+    },
+
+    # Check convergence based on relative ELBO change
+    .check_convergence = function(elbo, tol) {
+      private$.elbo_history <- c(private$.elbo_history, elbo)
+      n <- length(private$.elbo_history)
+      if (n < 2) {
+        return(FALSE)
+      }
+      rel_change <- abs(private$.elbo_history[n] - private$.elbo_history[n - 1]) /
+        (abs(private$.elbo_history[n - 1]) + 1e-10)
+      rel_change < tol
     },
 
     # Update U and V factors

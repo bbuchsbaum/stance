@@ -20,6 +20,7 @@ Imports:
     neuroim2,
     fmrireg,
     R6,
+    cli,
     Rcpp (>= 1.0.0),
     RcppArmadillo,
     Matrix,
