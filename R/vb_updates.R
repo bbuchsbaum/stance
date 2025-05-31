@@ -441,4 +441,4 @@ compute_residual_sum_squares <- function(Y, S_gamma, U, V, H_v, hrf_basis) {
   }
   
   return(rss)
-} 
+}
