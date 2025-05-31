@@ -192,6 +192,134 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
   output
 }
 
+#' Simulate CBD Data with Voxel-Specific HRFs
+#'
+#' Convenience wrapper around `simulate_fmri_data` that allows the
+#' user to specify voxel-specific HRF coefficients. The HRF for each
+#' voxel is obtained by multiplying the provided coefficient matrix
+#' with the chosen HRF basis. The function returns a structured list
+#' including the ground truth HRF coefficients and noise variance to
+#' simplify unit tests.
+#'
+#' @param V Number of voxels
+#' @param T Number of time points
+#' @param K Number of cognitive states
+#' @param rank Rank of spatial decomposition (default: min(V, K))
+#' @param hrf_basis HRF basis specification or matrix
+#' @param true_H Matrix of true HRF coefficients (V x L_basis)
+#' @param TR Repetition time in seconds
+#' @param snr Signal-to-noise ratio
+#' @param transition_matrix Optional K x K transition matrix
+#' @param pi0 Optional length-K initial state probabilities
+#' @param state_design Optional K x T design matrix
+#' @param return_neuroim Logical, return neuroimaging objects
+#' @param dims Spatial dimensions when return_neuroim = TRUE
+#' @param verbose Logical, print simulation progress
+#'
+#' @return List with elements Y, S, W, U, V_mat, H, hrf_basis,
+#'   true_sigma2 and other parameters. When `return_neuroim = TRUE`
+#'   NeuroVec/NeuroVol objects are included.
+#' @export
+simulate_cbd_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
+                              hrf_basis = "canonical", true_H = NULL,
+                              TR = 2, snr = 1,
+                              transition_matrix = NULL, pi0 = NULL,
+                              state_design = NULL, return_neuroim = FALSE,
+                              dims = NULL, verbose = FALSE) {
+
+  if (is.null(rank)) {
+    rank <- min(V, K, 20)
+  }
+
+  if (return_neuroim && is.null(dims)) {
+    dims <- determine_spatial_dims(V)
+  }
+
+  spatial_data <- generate_spatial_patterns(V, K, rank, TRUE, dims)
+  U <- spatial_data$U
+  V_mat <- spatial_data$V_mat
+  W <- spatial_data$W
+
+  if (!is.null(state_design)) {
+    if (!is.matrix(state_design) || nrow(state_design) != K ||
+        ncol(state_design) != T) {
+      stop("state_design must be a K x T matrix")
+    }
+    S <- state_design
+    Pi <- transition_matrix
+    pi0 <- pi0
+  } else {
+    markov <- generate_markov_states(K, T, transition_matrix, pi0)
+    S <- markov$S
+    Pi <- markov$Pi
+    pi0 <- markov$pi0
+  }
+
+  basis <- if (is.matrix(hrf_basis)) {
+    hrf_basis
+  } else {
+    fun <- switch(tolower(hrf_basis),
+                  "canonical" = create_hrf_basis_canonical,
+                  "fir" = create_hrf_basis_fir,
+                  "spline" = create_hrf_basis_fir,
+                  stop("Unknown hrf_basis: ", hrf_basis))
+    do.call(fun, list(TR = TR))
+  }
+
+  L_basis <- ncol(basis)
+
+  if (is.null(true_H)) {
+    true_H <- matrix(rnorm(V * L_basis, sd = 0.1), V, L_basis)
+    true_H[, 1] <- true_H[, 1] + 1
+  } else {
+    if (!is.matrix(true_H) || nrow(true_H) != V || ncol(true_H) != L_basis) {
+      stop("true_H must be a V x L_basis matrix")
+    }
+  }
+
+  signal <- matrix(0, V, T)
+  for (v in seq_len(V)) {
+    h_v <- basis %*% true_H[v, ]
+    X_v <- convolve_with_hrf(S, as.vector(h_v))
+    signal[v, ] <- drop(W[v, ] %*% X_v)
+  }
+
+  noise <- generate_structured_noise(V, T, dims)
+  signal_power <- mean(signal^2)
+  noise_power <- mean(noise^2)
+
+  if (snr <= 0) {
+    noise_scaled <- noise
+    Y <- noise_scaled
+  } else {
+    noise_scaled <- noise * sqrt(signal_power / (snr * noise_power))
+    Y <- signal + noise_scaled
+  }
+
+  out <- list(
+    Y = Y,
+    S = S,
+    W = W,
+    U = U,
+    V_mat = V_mat,
+    H = true_H,
+    hrf_basis = basis,
+    noise = noise_scaled,
+    true_sigma2 = mean(noise_scaled^2),
+    Pi = Pi,
+    pi0 = pi0,
+    params = list(V = V, T = T, K = K, rank = rank, TR = TR,
+                  snr = snr, Pi = Pi, pi0 = pi0)
+  )
+
+  if (return_neuroim) {
+    out <- convert_to_neuroim(out, dims, TR)
+  }
+
+  out
+}
+
+
 #' Generate Spatial Patterns
 #'
 #' Creates realistic spatial patterns with low-rank structure and optional smoothness.
