@@ -220,6 +220,28 @@ restore_spatial_structure <- function(mat, reference, output_type = c("temporal"
     stop("Cannot extract spatial information from reference")
   }
   
+  # Determine expected voxel count from mask or space
+  expected_voxels <- NULL
+  if (!is.null(mask)) {
+    expected_voxels <- sum(mask)
+  } else {
+    space_dim <- try(neuroim2::dim(space_obj), silent = TRUE)
+    if (!inherits(space_dim, "try-error")) {
+      if (length(space_dim) > 3) {
+        expected_voxels <- prod(space_dim[1:3])
+      } else {
+        expected_voxels <- prod(space_dim)
+      }
+    }
+  }
+
+  if (!is.null(expected_voxels) && nrow(mat) != expected_voxels) {
+    stop(sprintf(
+      "Matrix has %d rows but spatial reference implies %d voxels",
+      nrow(mat), expected_voxels
+    ))
+  }
+
   # Restore based on output type
   if (output_type == "temporal") {
     # Time series data (V x T)
