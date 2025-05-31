@@ -153,3 +153,20 @@ test_that("performance characteristics are reasonable", {
   })
   expect_true(time_conv["elapsed"] < 0.5)  # Should be < 500ms
 })
+
+# CBD-specific infrastructure tests ----
+
+test_that("run_cbd_analysis returns a fitted decoder", {
+  sim <- simulate_fmri_data(V = 20, T = 30, K = 2, algorithm = "CBD", verbose = FALSE)
+  fit <- run_cbd_analysis(sim$Y, K = 2, max_iter = 2, verbose = FALSE)
+  expect_s3_class(fit, "ContinuousBayesianDecoder")
+  conv <- fit$get_convergence()
+  expect_true(length(conv$elbo_history) >= 1)
+})
+
+test_that("CBD helper functions are available", {
+  expect_true(exists("vb_e_step"))
+  expect_true(exists("vb_m_step"))
+  expect_true(exists("compute_elbo"))
+  expect_true(exists("forward_backward_algorithm"))
+})
