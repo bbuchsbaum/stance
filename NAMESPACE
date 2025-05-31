@@ -12,6 +12,8 @@ export(simulate_fmri_data)
 export(validate_fmri_input)
 export(extract_data_matrix)
 export(restore_spatial_structure)
+export(generate_event_design)
+export(simulate_multi_subject)
 
 # Visualization functions
 export(plot_spatial_maps)
