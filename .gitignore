@@ -55,7 +55,6 @@ rsconnect/
 
 # renv
 renv/
-renv.lock
 
 # profiling data
 *.Rprof

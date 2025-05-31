@@ -1,0 +1,10 @@
+{
+  "R": {
+    "Version": "4.1.0"
+  },
+  "Packages": {
+    "neuroim2": {"Package": "neuroim2", "Version": "0.1.0"},
+    "fmrireg": {"Package": "fmrireg", "Version": "0.1.0"},
+    "R6": {"Package": "R6", "Version": "2.5.1"}
+  }
+}
