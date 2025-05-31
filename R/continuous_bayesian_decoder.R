@@ -49,11 +49,12 @@ ContinuousBayesianDecoder <- R6::R6Class(
     #' @param sigma2_prior Noise variance prior (default: 1.0)
     #' @param engine Computation engine ("R" or "cpp", default: "cpp")
     initialize = function(Y, K, r = NULL, hrf_basis = "canonical",
+                         hrf_params = list(),
                          lambda_H_prior = 1.0, sigma2_prior = 1.0,
                          engine = "cpp") {
 
       # Validate basic arguments
-      private$.validate_inputs(Y, K, r, hrf_basis)
+      private$.validate_inputs(Y, K, r, hrf_basis, hrf_params)
 
       # Use shared utilities for data handling
       private$.setup_data_structures(Y)
@@ -61,8 +62,9 @@ ContinuousBayesianDecoder <- R6::R6Class(
       if (private$.T <= K) {
         stop("Number of timepoints T must be greater than K")
       }
-      # HRF setup using shared utility
+      # HRF setup using shared utilities
       private$.setup_hrf_kernel(hrf_basis)
+      private$.setup_hrf_basis(hrf_basis, hrf_params)
 
       # Store parameters
       private$.K <- K
@@ -257,7 +259,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
     .fitted = FALSE,
     
     # Input validation
-    .validate_inputs = function(Y, K, r, hrf_basis) {
+    .validate_inputs = function(Y, K, r, hrf_basis, hrf_params) {
       # Validate Y
       if (!(is.matrix(Y) || inherits(Y, "NeuroVec"))) {
         stop("Y must be a matrix or NeuroVec object")
@@ -281,6 +283,10 @@ ContinuousBayesianDecoder <- R6::R6Class(
       } else if (!is.matrix(hrf_basis)) {
         stop("hrf_basis must be a character string or matrix")
       }
+
+      if (!is.list(hrf_params)) {
+        stop("hrf_params must be a list")
+      }
     },
     
     # Setup data structures
@@ -294,11 +300,28 @@ ContinuousBayesianDecoder <- R6::R6Class(
       private$.T <- ncol(private$.Y_data)
     },
     
-    # Setup HRF basis using fmrireg
+    # Setup HRF kernel for fixed-convolution routines
     .setup_hrf_kernel = function(hrf_basis) {
       private$.hrf_kernel <- setup_hrf_kernel(hrf_basis)
-      private$.L_hrf <- if (is.matrix(private$.hrf_kernel)) nrow(private$.hrf_kernel) else length(private$.hrf_kernel)
-      private$.L_basis <- if (is.matrix(private$.hrf_kernel)) ncol(private$.hrf_kernel) else 1
+    },
+
+    # Setup HRF basis matrix
+    .setup_hrf_basis = function(hrf_basis, hrf_params) {
+      if (is.matrix(hrf_basis)) {
+        basis <- hrf_basis
+      } else {
+        basis_fun <- switch(tolower(hrf_basis),
+          "canonical" = create_hrf_basis_canonical,
+          "fir" = create_hrf_basis_fir,
+          "spline" = create_hrf_basis_fir,
+          stop("Unknown hrf_basis: ", hrf_basis)
+        )
+        basis <- do.call(basis_fun, hrf_params)
+      }
+      private$.hrf_basis <- basis
+      private$.hrf_kernel <- basis[, 1]
+      private$.L_hrf <- nrow(basis)
+      private$.L_basis <- ncol(basis)
     },
     
     # Initialize model parameters
@@ -313,8 +336,12 @@ ContinuousBayesianDecoder <- R6::R6Class(
       private$.Y_proj <- crossprod(private$.U, private$.Y_data)
       
       # Initialize HRF coefficients with least squares
-      private$.H_v <- matrix(0, private$.n_voxels, private$.L_basis)
-      # TODO: Implement LS initialization
+      basis <- private$.hrf_basis
+      L <- min(ncol(private$.Y_data), nrow(basis))
+      X <- basis[seq_len(L), , drop = FALSE]
+      XtX_inv <- tryCatch(solve(crossprod(X)), error = function(e) MASS::ginv(crossprod(X)))
+      XtY <- crossprod(X, t(private$.Y_data[, seq_len(L), drop = FALSE]))
+      private$.H_v <- t(XtX_inv %*% XtY)
       
       # Initialize HMM parameters
       private$.Pi <- diag(private$.K) * 0.8 + matrix(0.2 / private$.K, private$.K, private$.K)
