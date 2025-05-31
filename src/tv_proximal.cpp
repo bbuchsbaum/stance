@@ -196,7 +196,7 @@ arma::vec prox_tv_dual(const arma::vec& x, double lambda,
                        int max_iter = 100, double tol = 1e-8) {
   int n = x.n_elem;
   
-  if (n <= 1 || lambda <= 0) {
+  if (n <= 2 || lambda <= 0) {
     return x;
   }
   
