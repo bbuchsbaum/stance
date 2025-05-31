@@ -238,7 +238,7 @@ test_that("Low-rank operations are numerically stable", {
   
   # Test Lipschitz estimation
   hrf <- rep(1/10, 10)  # Simple normalized HRF
-  L <- estimate_lipschitz_lowrank_rcpp(U, S, V_mat, hrf, T = 100)
+  L <- estimate_lipschitz_lowrank_rcpp(U, S, V_mat, hrf)
   
   expect_true(is.finite(L))
   expect_gt(L, 0)

@@ -13,22 +13,27 @@ using namespace arma;
 //' @param S Singular values (length r)
 //' @param V Right singular vectors (K x r)
 //' @param hrf_kernel HRF kernel vector
-//' @param T Number of time points
-//' @param max_iter Maximum iterations for power method
-//' @param tol Convergence tolerance
 //' 
 //' @return Estimated Lipschitz constant
 //' 
 //' @export
 // [[Rcpp::export]]
-double estimate_lipschitz_lowrank_rcpp(const arma::mat& U, 
+double estimate_lipschitz_lowrank_rcpp(const arma::mat& U,
                                       const arma::vec& S,
                                       const arma::mat& V,
-                                      const arma::vec& hrf_kernel,
-                                      int T,
-                                      int max_iter = 30,
-                                      double tol = 1e-6) {
-  
+                                      const arma::vec& hrf_kernel) {
+
+  // Input validation
+  if (U.is_empty() || V.is_empty() || S.is_empty() || hrf_kernel.is_empty()) {
+    stop("Input matrices/vectors cannot be empty");
+  }
+
+  // Dimension checks
+  if (U.n_cols != S.n_elem || V.n_cols != S.n_elem) {
+    stop("Dimension mismatch: columns of U (%d) and V (%d) must match length of S (%d)",
+         U.n_cols, V.n_cols, S.n_elem);
+  }
+
   // For low-rank W = U * diag(S) * V'
   // W'W = V * diag(S^2) * V'
   // We need the largest eigenvalue of W'W
