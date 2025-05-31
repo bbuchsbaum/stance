@@ -242,6 +242,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+
+// update_hrf_coefficients_batched_cpp
+arma::mat update_hrf_coefficients_batched_cpp(const arma::mat& Y, const arma::mat& hrf_basis, double ridge, int block_size);
+RcppExport SEXP _stance_update_hrf_coefficients_batched_cpp(SEXP YSEXP, SEXP hrf_basisSEXP, SEXP ridgeSEXP, SEXP block_sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type hrf_basis(hrf_basisSEXP);
+    Rcpp::traits::input_parameter< double >::type ridge(ridgeSEXP);
+    Rcpp::traits::input_parameter< int >::type block_size(block_sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(update_hrf_coefficients_batched_cpp(Y, hrf_basis, ridge, block_size));
+    return rcpp_result_gen;
+END_RCPP
+}
 // check_openmp_support
 List check_openmp_support();
 RcppExport SEXP _stance_check_openmp_support() {
@@ -325,6 +340,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_convolve_voxel_hrf_rcpp", (DL_FUNC) &_stance_convolve_voxel_hrf_rcpp, 4},
     {"_stance_forward_pass_rcpp", (DL_FUNC) &_stance_forward_pass_rcpp, 3},
     {"_stance_backward_pass_rcpp", (DL_FUNC) &_stance_backward_pass_rcpp, 3},
+    {"_stance_update_hrf_coefficients_batched_cpp", (DL_FUNC) &_stance_update_hrf_coefficients_batched_cpp, 4},
     {NULL, NULL, 0}
 };
 

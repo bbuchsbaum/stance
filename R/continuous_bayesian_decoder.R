@@ -478,7 +478,18 @@ ContinuousBayesianDecoder <- R6::R6Class(
     },
     
     .update_hrf_coefficients = function() {
-      # TODO: Implement HRF coefficient updates with GMRF prior
+      H_new <- update_hrf_coefficients(
+        Y = private$.Y_data,
+        S_gamma = private$.S_gamma,
+        U = private$.U,
+        V = private$.V,
+        hrf_basis = private$.hrf_basis,
+        L_gmrf = private$.L_gmrf,
+        lambda_H_prior = private$.lambda_H_prior,
+        sigma2 = private$.sigma2,
+        engine = private$.engine
+      )
+      private$.H_v <- H_new
     },
     
     .update_hmm_parameters = function() {
@@ -561,7 +572,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
     .compute_log_likelihoods = function() {
       Y_proj <- private$.Y_proj
       Vmat <- private$.V
-      hrf <- private$.hrf_kernel
+      hrf <- as.vector(private$.hrf_basis %*% colMeans(private$.H_v))
       sigma2 <- private$.sigma2
 
       r <- private$.r

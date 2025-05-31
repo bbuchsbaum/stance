@@ -115,6 +115,9 @@ update_hrf_coefficients_r <- function(Y, S_gamma, U, V, hrf_basis, L_gmrf,
 
 update_hrf_coefficients_gmrf_cpp <- update_hrf_coefficients_r
 
+# Batched version fallback
+update_hrf_coefficients_batched_cpp <- update_hrf_coefficients_r
+
 #' Log-likelihood kernel (fallback)
 #' @keywords internal
 compute_log_likelihoods_r <- function(Y_proj, Vmat, hrf_kernel, sigma2) {

@@ -352,3 +352,19 @@ prox_tv_dual <- function(x, lambda, max_iter = 100L, tol = 1e-8) {
     .Call(`_stance_prox_tv_dual`, x, lambda, max_iter, tol)
 }
 
+#' Batched HRF coefficient update
+#'
+#' Estimates HRF coefficients for each voxel in batches using a
+#' ridge-stabilised solver.
+#'
+#' @param Y Data matrix (V x T)
+#' @param hrf_basis HRF basis matrix (T x L)
+#' @param ridge Small ridge penalty
+#' @param block_size Number of voxels per batch
+#'
+#' @return Matrix of HRF coefficients (V x L)
+#' @keywords internal
+update_hrf_coefficients_batched_cpp <- function(Y, hrf_basis, ridge = 1e-6, block_size = 64L) {
+    .Call(`_stance_update_hrf_coefficients_batched_cpp`, Y, hrf_basis, ridge, block_size)
+}
+
