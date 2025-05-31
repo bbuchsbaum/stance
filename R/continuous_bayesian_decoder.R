@@ -614,20 +614,26 @@ ContinuousBayesianDecoder <- R6::R6Class(
       beta <- matrix(0, K, T_len)
       c_scale <- numeric(T_len)
 
-      # Forward pass with scaling
-      alpha[, 1] <- pi0 * exp(log_lik[, 1])
-      c_scale[1] <- 1 / sum(alpha[, 1])
-      alpha[, 1] <- alpha[, 1] * c_scale[1]
+      if (private$.engine == "cpp" && exists("forward_pass_rcpp")) {
+        fp <- forward_pass_rcpp(log_lik, Pi, pi0)
+        alpha <- fp$alpha
+        c_scale <- fp$c
+        log_likelihood <- fp$log_likelihood
+      } else {
+        alpha[, 1] <- pi0 * exp(log_lik[, 1])
+        c_scale[1] <- 1 / sum(alpha[, 1])
+        alpha[, 1] <- alpha[, 1] * c_scale[1]
 
-      if (T_len > 1) {
-        for (t in 2:T_len) { # PERF: forward loop over time
-          alpha[, t] <- (alpha[, t - 1] %*% Pi) * exp(log_lik[, t])
-          c_scale[t] <- 1 / sum(alpha[, t])
-          alpha[, t] <- alpha[, t] * c_scale[t]
+        if (T_len > 1) {
+          for (t in 2:T_len) { # PERF: forward loop over time
+            alpha[, t] <- (alpha[, t - 1] %*% Pi) * exp(log_lik[, t])
+            c_scale[t] <- 1 / sum(alpha[, t])
+            alpha[, t] <- alpha[, t] * c_scale[t]
+          }
         }
-      }
 
-      log_likelihood <- -sum(log(c_scale))
+        log_likelihood <- -sum(log(c_scale))
+      }
 
       # Backward pass
       beta[, T_len] <- 1
