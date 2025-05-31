@@ -27,6 +27,7 @@ Imports:
     ggplot2,
     dplyr,
     magrittr,
+    MASS,
     stats,
     methods
 LinkingTo: 

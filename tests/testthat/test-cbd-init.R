@@ -33,4 +33,8 @@ test_that("ContinuousBayesianDecoder initializes on simulated data", {
   expect_equal(dim(priv$.S_gamma), c(K, Tlen))
   expect_equal(dim(priv$.S_xi), c(K, K, Tlen - 1))
   expect_true(is.numeric(priv$.sigma2))
+
+  expect_true(is.matrix(priv$.hrf_basis))
+  expect_equal(dim(priv$.H_v), c(V, ncol(priv$.hrf_basis)))
+  expect_gt(sum(abs(priv$.H_v)), 0)
 })
