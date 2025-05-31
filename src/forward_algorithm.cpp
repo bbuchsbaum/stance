@@ -1,6 +1,7 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::plugins(cpp11)]]
+#include "hmm_utils.h"
 
 using namespace Rcpp;
 using namespace arma;
@@ -25,19 +26,10 @@ using namespace arma;
 List forward_pass_rcpp(const arma::mat& log_lik,
                        const arma::mat& Pi,
                        const arma::vec& pi0) {
-  if (log_lik.is_empty() || Pi.is_empty() || pi0.is_empty()) {
-    stop("Inputs cannot be empty");
-  }
+  validate_forward_inputs(log_lik, Pi, pi0);
 
   int K = log_lik.n_rows;
   int T_len = log_lik.n_cols;
-
-  if (Pi.n_rows != K || Pi.n_cols != K) {
-    stop("Pi must be K x K");
-  }
-  if (pi0.n_elem != (unsigned)K) {
-    stop("pi0 must have length K");
-  }
 
   arma::mat alpha(K, T_len, fill::zeros);
   arma::vec c_scale(T_len, fill::ones);

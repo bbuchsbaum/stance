@@ -636,11 +636,15 @@ ContinuousBayesianDecoder <- R6::R6Class(
       }
 
       # Backward pass
-      beta[, T_len] <- 1
-      if (T_len > 1) {
-        for (t in (T_len - 1):1) { # PERF: backward loop over time
-          beta[, t] <- Pi %*% (beta[, t + 1] * exp(log_lik[, t + 1]))
-          beta[, t] <- beta[, t] * c_scale[t + 1]
+      if (private$.engine == "cpp" && exists("backward_pass_rcpp")) {
+        beta <- backward_pass_rcpp(log_lik, Pi, c_scale)
+      } else {
+        beta[, T_len] <- 1
+        if (T_len > 1) {
+          for (t in (T_len - 1):1) { # PERF: backward loop over time
+            beta[, t] <- Pi %*% (beta[, t + 1] * exp(log_lik[, t + 1]))
+            beta[, t] <- beta[, t] * c_scale[t + 1]
+          }
         }
       }
 
