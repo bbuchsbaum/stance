@@ -82,7 +82,8 @@ ContinuousBayesianDecoder <- R6::R6Class(
         max_iter = 100,
         tol = 1e-6,
         verbose = TRUE,
-        save_history = TRUE
+        save_history = TRUE,
+        elbo_full = FALSE
       )
 
       private$.iterations <- 0
@@ -446,7 +447,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
       Y <- private$.Y_data
       U <- private$.U
       Vmat <- private$.V
-      hrf <- private$.hrf_kernel
+      hrf <- as.vector(private$.hrf_basis %*% colMeans(private$.H_v))
       gamma <- private$.S_gamma
 
       lambda <- 1e-6
@@ -515,7 +516,8 @@ ContinuousBayesianDecoder <- R6::R6Class(
 
     .update_noise_variance = function() {
       W <- private$.U %*% t(private$.V)
-      HX <- convolve_with_hrf(private$.S_gamma, private$.hrf_kernel)
+      hrf <- as.vector(private$.hrf_basis %*% colMeans(private$.H_v))
+      HX <- convolve_with_hrf(private$.S_gamma, hrf)
       Y_hat <- W %*% HX
 
       resid <- private$.Y_data - Y_hat
@@ -562,8 +564,14 @@ ContinuousBayesianDecoder <- R6::R6Class(
         }
       }
 
+      hrf_prior <- -0.5 * private$.lambda_H_prior * sum(private$.H_v^2)
+
       elbo <- elbo_ll + entropy_gamma + entropy_xi + prior_term +
         prior_params + gmrf_prior
+
+      if (!is.null(private$.config$elbo_full) && private$.config$elbo_full) {
+        elbo <- elbo + hrf_prior
+      }
 
       return(elbo)
     },
