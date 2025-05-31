@@ -73,6 +73,12 @@ run_cbd_analysis <- function(Y, K, r = NULL, hrf_basis = "canonical",
 #'
 #' @keywords internal
 vb_e_step <- function(Y, params, config) {
+  engine <- config$engine
+  if (engine == "cpp" && !exists("forward_backward_cpp")) {
+    warning("forward_backward_cpp not available; using R implementation")
+    engine <- "R"
+  }
+
   # Forward-backward algorithm for state inference
   result <- forward_backward_algorithm(
     Y = Y,
@@ -83,7 +89,7 @@ vb_e_step <- function(Y, params, config) {
     Pi = params$Pi,
     pi0 = params$pi0,
     sigma2 = params$sigma2,
-    engine = config$engine
+    engine = engine
   )
   
   return(list(
@@ -108,7 +114,12 @@ vb_e_step <- function(Y, params, config) {
 #'
 #' @keywords internal
 vb_m_step <- function(Y, vb_params, params, config) {
-  
+  engine <- config$engine
+  if (engine == "cpp" && !exists("update_spatial_components_cpp")) {
+    warning("update_spatial_components_cpp not available; using R implementation")
+    engine <- "R"
+  }
+
   # Update spatial components (U, V)
   spatial_update <- update_spatial_components(
     Y = Y,
@@ -117,10 +128,15 @@ vb_m_step <- function(Y, vb_params, params, config) {
     hrf_basis = params$hrf_basis,
     current_U = params$U,
     current_V = params$V,
-    engine = config$engine
+    engine = engine
   )
   
   # Update HRF coefficients with GMRF prior
+  if (engine == "cpp" && !exists("update_hrf_coefficients_gmrf_cpp")) {
+    warning("update_hrf_coefficients_gmrf_cpp not available; using R implementation")
+    engine <- "R"
+  }
+
   H_v_update <- update_hrf_coefficients(
     Y = Y,
     S_gamma = vb_params$S_gamma,
@@ -130,7 +146,7 @@ vb_m_step <- function(Y, vb_params, params, config) {
     L_gmrf = params$L_gmrf,
     lambda_H_prior = params$lambda_H_prior,
     sigma2 = params$sigma2,
-    engine = config$engine
+    engine = engine
   )
   
   # Update HMM parameters
@@ -218,30 +234,25 @@ compute_elbo <- function(Y, vb_params, params, config) {
 
 #' Update Spatial Components
 #' @keywords internal
-update_spatial_components <- function(Y, S_gamma, H_v, hrf_basis, 
+update_spatial_components <- function(Y, S_gamma, H_v, hrf_basis,
                                      current_U, current_V, engine = "cpp") {
-  if (engine == "cpp") {
-    # Use Rcpp implementation
+  if (engine == "cpp" && exists("update_spatial_components_cpp")) {
     return(update_spatial_components_cpp(Y, S_gamma, H_v, hrf_basis, current_U, current_V))
-  } else {
-    # R implementation (placeholder)
-    stop("R implementation not yet available")
   }
+  update_spatial_components_r(Y, S_gamma, H_v, hrf_basis, current_U, current_V)
 }
 
 #' Update HRF Coefficients
 #' @keywords internal
-update_hrf_coefficients <- function(Y, S_gamma, U, V, hrf_basis, L_gmrf, 
+update_hrf_coefficients <- function(Y, S_gamma, U, V, hrf_basis, L_gmrf,
                                    lambda_H_prior, sigma2, engine = "cpp") {
-  if (engine == "cpp") {
-    # Use Rcpp implementation with GMRF prior
+  if (engine == "cpp" && exists("update_hrf_coefficients_gmrf_cpp")) {
     return(update_hrf_coefficients_gmrf_cpp(
       Y, S_gamma, U, V, hrf_basis, L_gmrf, lambda_H_prior, sigma2
     ))
-  } else {
-    # R implementation (placeholder)
-    stop("R implementation not yet available")
   }
+  update_hrf_coefficients_r(Y, S_gamma, U, V, hrf_basis,
+                            L_gmrf, lambda_H_prior, sigma2)
 }
 
 #' Update HMM Parameters

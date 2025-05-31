@@ -4,6 +4,9 @@
 using namespace Rcpp;
 using namespace arma;
 
+// Forward declaration for transposed convolution helper
+arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf);
+
 //' Compute FISTA Gradient for CLD
 //' 
 //' Computes the gradient of the least squares term for FISTA optimization.
@@ -14,16 +17,18 @@ using namespace arma;
 //' @param H_star_X Convolved states matrix (K x T)
 //' @param hrf_kernel HRF kernel vector
 //' @param precomputed_WtY Logical indicating if first argument is WtY
+//' @param WtW_precomp Optional pre-computed W'W matrix (K x K)
 //' 
 //' @return Gradient matrix (K x T)
 //' 
 //' @export
 // [[Rcpp::export]]
-arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY, 
+arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
                                       const arma::mat& W,
                                       const arma::mat& H_star_X,
                                       const arma::vec& hrf_kernel,
-                                      bool precomputed_WtY = false) {
+                                      bool precomputed_WtY = false,
+                                      const arma::mat& WtW_precomp = arma::mat()) {
   
   // Input validation
   if (Y_or_WtY.is_empty() || W.is_empty() || H_star_X.is_empty() || hrf_kernel.is_empty()) {
@@ -68,10 +73,15 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
     
   } else {
     // Efficient computation using pre-computed WtY
-    // WtW * H_star_X
-    arma::mat WtW = W.t() * W;
+    // Use provided WtW if available to avoid recomputation
+    arma::mat WtW;
+    if (WtW_precomp.is_empty()) {
+      WtW = W.t() * W;
+    } else {
+      WtW = WtW_precomp;
+    }
     arma::mat WtW_H_star_X = WtW * H_star_X;
-    
+
     // Grad_term = WtY - WtW * H_star_X
     Grad_term = Y_or_WtY - WtW_H_star_X;
   }
@@ -147,7 +157,6 @@ arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf) {
 //' 
 //' @param W Spatial maps matrix (V x K)
 //' @param hrf_kernel HRF kernel vector
-//' @param T Number of time points
 //' @param max_iter Maximum iterations for power method
 //' @param tol Convergence tolerance
 //' 
@@ -155,9 +164,8 @@ arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf) {
 //' 
 //' @export
 // [[Rcpp::export]]
-double estimate_lipschitz_rcpp(const arma::mat& W, 
+double estimate_lipschitz_rcpp(const arma::mat& W,
                                const arma::vec& hrf_kernel,
-                               int T,
                                int max_iter = 30,
                                double tol = 1e-6) {
   
@@ -167,9 +175,6 @@ double estimate_lipschitz_rcpp(const arma::mat& W,
   }
   if (hrf_kernel.is_empty()) {
     stop("HRF kernel cannot be empty");
-  }
-  if (T <= 0) {
-    stop("T must be positive");
   }
   
   // Compute W'W
@@ -231,3 +236,4 @@ double estimate_lipschitz_rcpp(const arma::mat& W,
   // Return L = ||H||_2^2 * lambda_max(W'W)
   return hrf_norm_sq * lambda_new;
 }
+

@@ -137,3 +137,57 @@ test_that("create_output_structure works for both algorithms", {
   expect_true(!is.null(cbd_out$uncertainty))
   expect_true(!is.null(cbd_out$posterior_params))
 })
+
+
+test_that("restore_spatial_structure sets probabilistic attribute", {
+  skip_if_not_installed("neuroim2")
+
+  space <- neuroim2::NeuroSpace(dim = c(2, 2, 2), spacing = c(1, 1, 1))
+  ref <- neuroim2::NeuroVol(rnorm(8), space)
+
+  # Single spatial map
+  mat_single <- matrix(rnorm(8), nrow = 8, ncol = 1)
+  res_single <- restore_spatial_structure(mat_single, ref,
+                                          output_type = "spatial",
+                                          probabilistic = TRUE)
+  expect_true(!is.null(attr(res_single, "probabilistic")))
+
+  # Multiple spatial maps
+  mat_multi <- matrix(rnorm(16), nrow = 8, ncol = 2)
+  res_multi <- restore_spatial_structure(mat_multi, ref,
+                                         output_type = "spatial",
+                                         probabilistic = TRUE)
+  if (is.list(res_multi)) {
+    expect_true(!is.null(attr(res_multi, "probabilistic")))
+    expect_true(all(vapply(res_multi, function(x)
+      !is.null(attr(x, "probabilistic")), logical(1))))
+  } else {
+    expect_true(!is.null(attr(res_multi, "probabilistic")))
+  }
+})
+
+
+test_that("restore_spatial_structure errors on dimension mismatch", {
+  skip_if_not_installed("neuroim2")
+
+  # Reference with space only
+  space_obj <- neuroim2::NeuroSpace(dim = c(2, 2, 2, 5))
+  mat_bad <- matrix(rnorm(10 * 5), nrow = 10, ncol = 5)
+  ref_space <- list(space = space_obj)
+
+  expect_error(
+    restore_spatial_structure(mat_bad, ref_space, output_type = "temporal"),
+    "10 rows.*8 voxels"
+  )
+
+  # Reference with mask
+  mask <- rep(TRUE, 5)
+  ref_mask <- list(space = space_obj, mask = mask)
+
+  expect_error(
+    restore_spatial_structure(mat_bad, ref_mask, output_type = "temporal"),
+    "10 rows.*5 voxels"
+  )
+})
+
+

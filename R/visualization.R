@@ -57,11 +57,22 @@ plot_spatial_maps <- function(W, layout = NULL, zlim = NULL,
     zlim <- range(W_mat, na.rm = TRUE)
   }
   
+  # Compute matrix dimensions once
+  dims <- try_reshape_vector(V)
+
   # Plot each spatial map
   for (k in 1:K) {
-    # Try to reshape to approximate square
+
+    # Try to reshape to approximate square; pad if necessary
     dims <- try_reshape_vector(V)
-    map_matrix <- matrix(W_mat[, k], dims[1], dims[2])
+    map_vals <- W_mat[, k]
+    total <- prod(dims)
+    if (total > length(map_vals)) {
+      map_vals <- c(map_vals, rep(NA, total - length(map_vals)))
+    }
+    map_matrix <- matrix(map_vals, dims[1], dims[2])
+
+
     
     image(map_matrix, zlim = zlim, col = col, axes = FALSE,
           main = if (!is.null(titles)) titles[k] else paste("State", k))
@@ -168,9 +179,12 @@ plot_convergence <- function(values, type = c("objective", "elbo"),
   }
   
   n_iter <- length(values)
-  
+
   # Set up plot
   ylab <- if (type == "objective") "Objective Value" else "ELBO"
+
+  label_y <- if (log_scale && all(values > 0))
+    log(mean(range(values))) else mean(range(values))
   
   if (log_scale && all(values > 0)) {
     plot(1:n_iter, log(values), type = "l", 
@@ -183,7 +197,7 @@ plot_convergence <- function(values, type = c("objective", "elbo"),
   # Highlight convergence point
   if (!is.null(highlight_converged) && highlight_converged <= n_iter) {
     abline(v = highlight_converged, col = "red", lty = 2)
-    text(highlight_converged, mean(range(values)), "Converged", 
+    text(highlight_converged, label_y, "Converged",
          col = "red", pos = 4)
   }
   
@@ -234,16 +248,25 @@ plot_hrf <- function(hrf, TR = 2, col = NULL, main = "HRF", ...) {
 #' @keywords internal
 try_reshape_vector <- function(n) {
   sqrt_n <- sqrt(n)
-  if (sqrt_n == floor(sqrt_n)) {
-    return(c(sqrt_n, sqrt_n))
+
+  best_dims <- c(1, n)
+  best_diff <- Inf
+  best_area <- Inf
+
+  for (r in 1:ceiling(sqrt_n)) {
+    c <- ceiling(n / r)
+    dims <- sort(c(r, c))
+    diff <- dims[2] - dims[1]
+    area <- prod(dims)
+
+    if (diff < best_diff || (diff == best_diff && area < best_area)) {
+      best_diff <- diff
+      best_area <- area
+      best_dims <- dims
+    }
   }
-  
-  # Find factors closest to square root
-  factors <- which(n %% 1:n == 0)
-  diffs <- abs(factors - sqrt_n)
-  best_factor <- factors[which.min(diffs)]
-  
-  c(best_factor, n / best_factor)
+
+  best_dims
 }
 
 #' Create Diagnostic Plot Panel
