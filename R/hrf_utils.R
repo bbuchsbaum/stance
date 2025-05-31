@@ -278,6 +278,23 @@ hrf_basis_matrix <- function(basis_type = "spmg3", TR = 2, len = 32, n_basis = N
   basis_mat
 }
 
+#' Create HRF Basis (neuroim2 integration)
+#'
+#' Convenience wrapper that generates an HRF basis matrix using
+#' `hrf_basis_matrix()` and returns it for use with neuroim2 based
+#' workflows.
+#'
+#' @param type Character string specifying the basis type
+#' @param TR Repetition time in seconds
+#' @param duration Total duration of the HRF basis in seconds
+#'
+#' @return Matrix of basis functions (time points x basis functions)
+#' @export
+create_hrf_basis_neuroim2 <- function(type = "spmg3", TR = 2, duration = 32) {
+  validate_hrf_spec(type, context = "hrf basis type")
+  hrf_basis_matrix(basis_type = type, TR = TR, len = duration)
+}
+
 #' Validate HRF Specification
 #'
 #' Checks HRF specifications and provides informative error messages.
