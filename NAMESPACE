@@ -26,6 +26,7 @@ export(setup_hrf_kernel)
 # Data structure utilities
 export(as_neurovol)
 export(as_neurovec)
+export("%||%")
 
 # S3 methods
 S3method(plot, ContinuousBayesianDecoder)
