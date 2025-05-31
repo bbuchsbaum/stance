@@ -1,15 +1,23 @@
 #include <RcppArmadillo.h>
 // [[Rcpp::depends(RcppArmadillo)]]
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 using namespace Rcpp;
 using namespace arma;
 
-// Forward declarations for helper functions
-arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf);
+
+// Forward declaration for transposed convolution helper
+arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf,
+                                  int n_threads = 0);
+
 arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
                                               const arma::mat& WtW,
                                               const arma::mat& H_star_X,
                                               const arma::vec& hrf_kernel);
+
 
 //' Compute FISTA Gradient for CLD
 //' 
@@ -129,7 +137,10 @@ arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
   arma::mat Grad_term = WtY - WtW * H_star_X;
 
   // Apply transposed convolution with time-reversed HRF
-  arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel);
+
+  // This is the gradient with respect to X (before convolution)
+  arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, 0);
+  
 
   return -Grad_L2;
 }
@@ -138,15 +149,18 @@ arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
 //' 
 //' Performs transposed convolution (correlation) with time-reversed HRF.
 //' This is equivalent to convolution with reversed kernel.
+//' Supports OpenMP parallelization when available.
 //' 
 //' @param X Matrix with signals in rows (K x T)
 //' @param hrf HRF kernel vector
+//' @param n_threads Number of threads to use (0 = auto)
 //' 
 //' @return Transposed convolution result (K x T)
 //' 
 //' @keywords internal
 // [[Rcpp::export]]
-arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf) {
+arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf,
+                                  int n_threads = 0) {
   // Input validation
   if (X.is_empty()) {
     stop("Input matrix X cannot be empty");
@@ -158,6 +172,14 @@ arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf) {
   int K = X.n_rows;
   int T = X.n_cols;
   int h_len = hrf.n_elem;
+
+#ifdef _OPENMP
+  int max_threads = omp_get_max_threads();
+  if (n_threads <= 0 || n_threads > max_threads) {
+    n_threads = max_threads;
+  }
+  omp_set_num_threads(n_threads);
+#endif
   
   // Check for potential overflow
   if (h_len > T) {
@@ -171,6 +193,9 @@ arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf) {
   arma::mat result(K, T, fill::zeros);
   
   // Perform convolution for each row
+#ifdef _OPENMP
+  #pragma omp parallel for
+#endif
   for (int k = 0; k < K; k++) {
     for (int t = 0; t < T; t++) {
       double sum = 0.0;
