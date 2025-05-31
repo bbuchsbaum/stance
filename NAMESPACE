@@ -12,6 +12,10 @@ export(simulate_fmri_data)
 export(validate_fmri_input)
 export(extract_data_matrix)
 export(restore_spatial_structure)
+
+export(create_gmrf_laplacian_neuroim2)
+export(create_chain_laplacian)
+
 export(generate_event_design)
 export(simulate_multi_subject)
 
