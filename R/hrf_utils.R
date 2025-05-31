@@ -296,6 +296,74 @@ create_hrf_basis_neuroim2 <- function(type = "spmg3", TR = 2, duration = 32) {
   hrf_basis_matrix(basis_type = type, TR = TR, len = duration)
 }
 
+#' Canonical HRF Basis with Derivatives
+#'
+#' Convenience helper for generating the SPM canonical HRF basis
+#' with optional temporal and dispersion derivatives.
+#'
+#' @param TR Repetition time in seconds. Default: 0.8
+#' @param duration_secs Duration of the basis in seconds. Default: 32
+#' @param n_derivatives Number of derivatives to include (0, 1 or 2).
+#'   0 = canonical only, 1 = + temporal derivative, 2 = + dispersion
+#'   derivative.
+#' @param orthonormal Logical, orthonormalise columns. Default: TRUE
+#'
+#' @return Matrix of basis functions (time points x n_basis)
+#' @export
+create_hrf_basis_canonical <- function(TR = 0.8, duration_secs = 32,
+                                        n_derivatives = 2,
+                                        orthonormal = TRUE) {
+  if (!n_derivatives %in% 0:2) {
+    stop("n_derivatives must be 0, 1, or 2")
+  }
+
+  type <- switch(n_derivatives + 1,
+                 "spmg1", "spmg2", "spmg3")
+
+  basis <- hrf_basis_matrix(type, TR = TR, len = duration_secs)
+
+  if (orthonormal) {
+    basis <- qr.Q(qr(basis))
+  }
+
+  basis
+}
+
+#' Finite Impulse Response HRF Basis
+#'
+#' Generates an FIR basis matrix of evenly spaced sticks.
+#'
+#' @param TR Repetition time in seconds. Default: 0.8
+#' @param duration_secs Duration of the basis in seconds. Default: 32
+#' @param fir_resolution_secs Temporal spacing of FIR basis sticks in seconds.
+#'   Defaults to `TR`.
+#' @param orthonormal Logical, orthonormalise columns. Default: TRUE
+#'
+#' @return Matrix of basis functions (time points x n_basis)
+#' @export
+create_hrf_basis_fir <- function(TR = 0.8, duration_secs = 32,
+                                 fir_resolution_secs = TR,
+                                 orthonormal = TRUE) {
+  if (fir_resolution_secs <= 0) {
+    stop("fir_resolution_secs must be > 0")
+  }
+
+  n_basis <- ceiling(duration_secs / fir_resolution_secs)
+
+  basis <- hrf_basis_matrix(
+    "fir",
+    TR = TR,
+    len = duration_secs,
+    n_basis = n_basis
+  )
+
+  if (orthonormal) {
+    basis <- qr.Q(qr(basis))
+  }
+
+  basis
+}
+
 #' Validate HRF Specification
 #'
 #' Checks HRF specifications and provides informative error messages.

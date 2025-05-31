@@ -162,3 +162,19 @@ test_that("convolve_fft internal function works correctly", {
   expect_equal(length(result), length(x))
   expect_equal(result[1:3], h, tolerance = 1e-10)
 })
+
+test_that("create_hrf_basis_canonical generates orthonormal basis", {
+  basis <- create_hrf_basis_canonical()
+  expect_true(is.matrix(basis))
+  expect_equal(ncol(basis), 3)
+  expect_equal(nrow(basis), floor(32 / 0.8) + 1)
+  cross <- crossprod(basis)
+  expect_equal(cross, diag(ncol(basis)), tolerance = 1e-6)
+})
+
+test_that("create_hrf_basis_fir handles TR drift edge cases", {
+  basis <- create_hrf_basis_fir(TR = 0.7, duration_secs = 31, fir_resolution_secs = 1)
+  expect_true(is.matrix(basis))
+  expect_equal(nrow(basis), floor(31 / 0.7) + 1)
+  expect_true(ncol(basis) >= 1)
+})
