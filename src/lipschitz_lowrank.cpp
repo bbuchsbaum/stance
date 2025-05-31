@@ -90,14 +90,12 @@ arma::mat compute_WtY_lowrank_rcpp(const arma::mat& U,
 arma::mat compute_WtW_lowrank_rcpp(const arma::mat& V,
                                    const arma::vec& S) {
   // W'W = V * diag(S^2) * V'
-  arma::vec S_sq = square(S);
-  
-  // Scale columns of V by sqrt(S^2) = S
+
+  // Scale columns of V by S
   arma::mat V_scaled = V;
-  for (int i = 0; i < S.n_elem; i++) {
+  for (int i = 0; i < S.n_elem; i++)
     V_scaled.col(i) *= S(i);
-  }
-  
-  // Return V_scaled * V'
-  return V_scaled * V.t();
+
+  // Return V_scaled * V_scaled'
+  return V_scaled * V_scaled.t();
 }
