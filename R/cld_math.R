@@ -8,46 +8,6 @@
 #' @keywords internal
 NULL
 
-#' Fast Matrix Multiplication with Caching
-#'
-#' Computes matrix products with optional caching of intermediate results.
-#'
-#' @param A First matrix
-#' @param B Second matrix
-#' @param cache_key Optional key for caching result
-#' @param cache_env Environment for storing cached results
-#' 
-#' @return Matrix product A %*% B
-#' @keywords internal
-fast_matmul <- function(A, B, cache_key = NULL, cache_env = NULL) {
-  if (!is.null(cache_key) && !is.null(cache_env)) {
-    if (exists(cache_key, envir = cache_env)) {
-      return(get(cache_key, envir = cache_env))
-    }
-  }
-  
-  result <- A %*% B
-  
-  if (!is.null(cache_key) && !is.null(cache_env)) {
-    assign(cache_key, result, envir = cache_env)
-  }
-  
-  result
-}
-
-#' Compute Row-wise Convolution
-#'
-#' Helper function for efficient row-wise convolution operations.
-#'
-#' @param X Matrix with signals in rows
-#' @param h Kernel vector
-#' @param method Convolution method ("direct" or "fft")
-#' 
-#' @return Convolved matrix
-#' @keywords internal
-convolve_rows <- function(X, h, method = "direct") {
-  convolve_with_hrf(X, h, method = method)
-}
 
 #' Soft Thresholding Operator
 #'
@@ -94,7 +54,7 @@ compute_tv <- function(X) {
 #' @keywords internal
 compute_objective <- function(Y, W, X, hrf, lambda_tv) {
   # Convolve states with HRF
-  HX <- convolve_rows(X, hrf)
+  HX <- convolve_with_hrf(X, hrf)
   
   # Reconstruction error
   residual <- Y - W %*% HX
@@ -119,33 +79,6 @@ project_orthogonal <- function(U) {
   svd_result$u
 }
 
-#' Block-wise Processing
-#'
-#' Processes large matrices in blocks for memory efficiency.
-#'
-#' @param X Large matrix
-#' @param fun Function to apply to each block
-#' @param block_size Number of rows per block
-#' @param ... Additional arguments to fun
-#' 
-#' @return Processed matrix
-#' @keywords internal
-process_blocks <- function(X, fun, block_size = 1000, ...) {
-  n_rows <- nrow(X)
-  n_blocks <- ceiling(n_rows / block_size)
-  
-  results <- list()
-  
-  for (b in seq_len(n_blocks)) {
-    start_idx <- (b - 1) * block_size + 1
-    end_idx <- min(b * block_size, n_rows)
-    
-    block <- X[start_idx:end_idx, , drop = FALSE]
-    results[[b]] <- fun(block, ...)
-  }
-  
-  do.call(rbind, results)
-}
 
 #' Estimate Operator Norm via Power Method
 #'
