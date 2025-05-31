@@ -359,8 +359,33 @@ compute_entropy_term <- function(S_gamma, S_xi) {
 
 #' @keywords internal
 compute_residual_sum_squares <- function(Y, S_gamma, U, V, H_v, hrf_basis) {
+
   # Compute expected residual sum of squares using matrix operations
   W <- U %*% t(V)
   Y_hat <- W %*% S_gamma
   sum((Y - Y_hat)^2)
+
+  
+  rss <- 0
+  
+  # Simplified computation - TODO full version would properly handle HRF convolution
+  for (t in seq_len(T)) {
+    y_t <- Y[, t]
+    y_hat_t <- numeric(V_voxels)
+    
+    # Compute expected observation
+    for (k in seq_len(K)) {
+      gamma_kt <- S_gamma[k, t]
+      if (gamma_kt > 1e-10) {
+        # W_k = U %*% V[k, ]
+        w_k <- U %*% V[k, ]
+        y_hat_t <- y_hat_t + gamma_kt * w_k
+      }
+    }
+    
+    # Add squared residuals
+    rss <- rss + sum((y_t - y_hat_t)^2)
+  }
+  
+  return(rss)
 }

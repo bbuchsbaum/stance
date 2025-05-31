@@ -629,7 +629,7 @@ plot.ContinuousLinearDecoder <- function(x, type = c("convergence", "states", "m
     old_par <- par(no.readonly = TRUE)
     on.exit(par(old_par))
     
-    layout(matrix(c(1, 2, 3, 3), 2, 2, byrow = TRUE))
+    graphics::layout(matrix(c(1, 2, 3, 3), 2, 2, byrow = TRUE))
     
     # 1. Convergence
     if (length(x$get_diagnostics()$objective_values) > 0) {

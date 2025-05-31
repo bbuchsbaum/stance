@@ -15,8 +15,6 @@ export(restore_spatial_structure)
 
 # Visualization functions
 export(plot_spatial_maps)
-export(plot_hrf_estimates)
-export(plot_state_sequence)
 
 # HRF utilities extending fmrireg
 export(create_hrf_basis_neuroim2)
