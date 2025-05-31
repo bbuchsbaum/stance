@@ -48,26 +48,33 @@ ContinuousBayesianDecoder <- R6::R6Class(
     #' @param lambda_H_prior GMRF precision parameter (default: 1.0)
     #' @param sigma2_prior Noise variance prior (default: 1.0)
     #' @param engine Computation engine ("R" or "cpp", default: "cpp")
-    initialize = function(Y, K, r = NULL, hrf_basis = "canonical", 
-                         lambda_H_prior = 1.0, sigma2_prior = 1.0, 
+    initialize = function(Y, K, r = NULL, hrf_basis = "canonical",
+                         lambda_H_prior = 1.0, sigma2_prior = 1.0,
                          engine = "cpp") {
-      
-      # Input validation and data structure handling
+
+      # Validate basic arguments
       private$.validate_inputs(Y, K, r, hrf_basis)
+
+      # Use shared utilities for data handling
       private$.setup_data_structures(Y)
+
+      if (private$.T <= K) {
+        stop("Number of timepoints T must be greater than K")
+      }
+      # HRF setup using shared utility
       private$.setup_hrf_kernel(hrf_basis)
-      
+
       # Store parameters
       private$.K <- K
       private$.r <- r %||% min(20, ceiling(private$.n_voxels / 10))
       private$.lambda_H_prior <- lambda_H_prior
       private$.sigma2_prior <- sigma2_prior
       private$.engine <- match.arg(engine, c("R", "cpp"))
-      
+
       # Initialize model parameters
       private$.initialize_parameters()
       private$.setup_gmrf_structure()
-      
+
       # Setup configuration
       private$.config <- list(
         max_iter = 100,
@@ -75,7 +82,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
         verbose = TRUE,
         save_history = TRUE
       )
-      
+
       invisible(self)
     },
     
@@ -242,35 +249,20 @@ ContinuousBayesianDecoder <- R6::R6Class(
     
     # Setup data structures
     .setup_data_structures = function(Y) {
-      private$.Y_data <- Y
-      
-      if (inherits(Y, "NeuroVec")) {
-        private$.neuro_metadata <- space(Y)
-        private$.Y_data <- as.matrix(Y)
-      } else {
-        private$.Y_data <- as.matrix(Y)
-        private$.neuro_metadata <- NULL
-      }
-      
+      info <- validate_fmri_input(Y)
+      extracted <- extract_data_matrix(info$data, preserve_attributes = TRUE)
+
+      private$.Y_data <- extracted$data
+      private$.neuro_metadata <- extracted$metadata
       private$.n_voxels <- nrow(private$.Y_data)
       private$.T <- ncol(private$.Y_data)
     },
     
     # Setup HRF basis using fmrireg
     .setup_hrf_kernel = function(hrf_basis) {
-      if (is.character(hrf_basis)) {
-        # Use fmrireg to create basis
-        private$.hrf_kernel <- create_hrf_basis_neuroim2(
-          type = hrf_basis,
-          TR = 2.0,  # Default TR, should be configurable
-          duration = 32.0
-        )
-      } else {
-        private$.hrf_kernel <- hrf_basis
-      }
-      
-      private$.L_hrf <- nrow(private$.hrf_kernel)
-      private$.L_basis <- ncol(private$.hrf_kernel)
+      private$.hrf_kernel <- setup_hrf_kernel(hrf_basis)
+      private$.L_hrf <- if (is.matrix(private$.hrf_kernel)) nrow(private$.hrf_kernel) else length(private$.hrf_kernel)
+      private$.L_basis <- if (is.matrix(private$.hrf_kernel)) ncol(private$.hrf_kernel) else 1
     },
     
     # Initialize model parameters
@@ -278,7 +270,10 @@ ContinuousBayesianDecoder <- R6::R6Class(
       # Initialize spatial components via SVD
       Y_svd <- svd(private$.Y_data, nu = private$.r, nv = 0)
       private$.U <- Y_svd$u
-      private$.V <- matrix(rnorm(private$.K * private$.r), private$.K, private$.r)
+
+      V_rand <- matrix(rnorm(private$.K * private$.r), private$.K, private$.r)
+      private$.V <- qr.Q(qr(V_rand))
+
       private$.Y_proj <- crossprod(private$.U, private$.Y_data)
       
       # Initialize HRF coefficients with least squares
@@ -286,9 +281,7 @@ ContinuousBayesianDecoder <- R6::R6Class(
       # TODO: Implement LS initialization
       
       # Initialize HMM parameters
-      private$.Pi <- matrix(0.1, private$.K, private$.K)
-      diag(private$.Pi) <- 0.7
-      private$.Pi <- private$.Pi / rowSums(private$.Pi)
+      private$.Pi <- diag(private$.K) * 0.8 + matrix(0.2 / private$.K, private$.K, private$.K)
       private$.pi0 <- rep(1/private$.K, private$.K)
       
       # Initialize noise variance
