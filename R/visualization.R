@@ -168,9 +168,12 @@ plot_convergence <- function(values, type = c("objective", "elbo"),
   }
   
   n_iter <- length(values)
-  
+
   # Set up plot
   ylab <- if (type == "objective") "Objective Value" else "ELBO"
+
+  label_y <- if (log_scale && all(values > 0))
+    log(mean(range(values))) else mean(range(values))
   
   if (log_scale && all(values > 0)) {
     plot(1:n_iter, log(values), type = "l", 
@@ -183,7 +186,7 @@ plot_convergence <- function(values, type = c("objective", "elbo"),
   # Highlight convergence point
   if (!is.null(highlight_converged) && highlight_converged <= n_iter) {
     abline(v = highlight_converged, col = "red", lty = 2)
-    text(highlight_converged, mean(range(values)), "Converged", 
+    text(highlight_converged, label_y, "Converged",
          col = "red", pos = 4)
   }
   
