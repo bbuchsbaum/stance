@@ -169,7 +169,22 @@ BEGIN_RCPP
     rcpp_result_gen = Rcpp::wrap(compute_WtW_lowrank_rcpp(V, S));
     return rcpp_result_gen;
 END_RCPP
+
+// compute_log_likelihoods_rcpp
+arma::mat compute_log_likelihoods_rcpp(const arma::mat& Y_proj, const arma::mat& Vmat, const arma::vec& hrf_kernel, double sigma2);
+RcppExport SEXP _stance_compute_log_likelihoods_rcpp(SEXP Y_projSEXP, SEXP VmatSEXP, SEXP hrf_kernelSEXP, SEXP sigma2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y_proj(Y_projSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Vmat(VmatSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type hrf_kernel(hrf_kernelSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_log_likelihoods_rcpp(Y_proj, Vmat, hrf_kernel, sigma2));
+    return rcpp_result_gen;
+END_RCPP
 }
+
 // parallel_glm_fit_rcpp
 arma::mat parallel_glm_fit_rcpp(const arma::mat& Y, const arma::mat& X_conv, int n_threads, int chunk_size);
 RcppExport SEXP _stance_parallel_glm_fit_rcpp(SEXP YSEXP, SEXP X_convSEXP, SEXP n_threadsSEXP, SEXP chunk_sizeSEXP) {
@@ -271,6 +286,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_estimate_lipschitz_lowrank_rcpp", (DL_FUNC) &_stance_estimate_lipschitz_lowrank_rcpp, 4},
     {"_stance_compute_WtY_lowrank_rcpp", (DL_FUNC) &_stance_compute_WtY_lowrank_rcpp, 4},
     {"_stance_compute_WtW_lowrank_rcpp", (DL_FUNC) &_stance_compute_WtW_lowrank_rcpp, 2},
+    {"_stance_compute_log_likelihoods_rcpp", (DL_FUNC) &_stance_compute_log_likelihoods_rcpp, 4},
     {"_stance_parallel_glm_fit_rcpp", (DL_FUNC) &_stance_parallel_glm_fit_rcpp, 4},
     {"_stance_parallel_ridge_glm_rcpp", (DL_FUNC) &_stance_parallel_ridge_glm_rcpp, 5},
     {"_stance_check_openmp_support", (DL_FUNC) &_stance_check_openmp_support, 0},

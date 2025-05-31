@@ -572,6 +572,10 @@ ContinuousBayesianDecoder <- R6::R6Class(
         stop("Model parameters not initialized")
       }
 
+      if (private$.engine == "cpp" && exists("compute_log_likelihoods_rcpp")) {
+        return(compute_log_likelihoods_rcpp(Y_proj, Vmat, hrf, sigma2))
+      }
+
       sigma2 <- max(sigma2, 1e-8)
       const_term <- -0.5 * r * log(2 * pi * sigma2)
 

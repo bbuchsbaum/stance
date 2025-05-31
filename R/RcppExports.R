@@ -194,6 +194,21 @@ compute_WtY_lowrank_rcpp <- function(U, S, V, Y) {
 compute_WtW_lowrank_rcpp <- function(V, S) {
     .Call(`_stance_compute_WtW_lowrank_rcpp`, V, S)
 }
+#' Log-likelihood calculation kernel
+#'
+#' Computes log-likelihoods for each state/time point using low-rank
+#' projected data.
+#'
+#' @param Y_proj r x T matrix of projected data
+#' @param Vmat K x r matrix of loadings
+#' @param hrf_kernel HRF kernel vector
+#' @param sigma2 Noise variance
+#'
+#' @return Matrix of log-likelihoods (K x T)
+#' @keywords internal
+compute_log_likelihoods_rcpp <- function(Y_proj, Vmat, hrf_kernel, sigma2) {
+    .Call(`_stance_compute_log_likelihoods_rcpp`, Y_proj, Vmat, hrf_kernel, sigma2)
+}
 
 #' Parallel Voxel-wise GLM Fitting
 #' 
