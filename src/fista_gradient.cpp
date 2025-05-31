@@ -231,3 +231,4 @@ double estimate_lipschitz_rcpp(const arma::mat& W,
   // Return L = ||H||_2^2 * lambda_max(W'W)
   return hrf_norm_sq * lambda_new;
 }
+
