@@ -435,9 +435,65 @@ ContinuousBayesianDecoder <- R6::R6Class(
       log_lik
     },
 
-    # Forward-backward algorithm wrapper
+    # Forward-backward algorithm using scaled probabilities
     .forward_backward = function(log_lik) {
-      stop("Not implemented")
+      K <- nrow(log_lik)
+      T_len <- ncol(log_lik)
+      Pi <- private$.Pi
+      pi0 <- private$.pi0
+
+      # Validate dimensions
+      if (nrow(Pi) != K || ncol(Pi) != K) {
+        stop("Pi must be K x K")
+      }
+      if (length(pi0) != K) {
+        stop("pi0 must have length K")
+      }
+
+      alpha <- matrix(0, K, T_len)
+      beta <- matrix(0, K, T_len)
+      c_scale <- numeric(T_len)
+
+      # Forward pass with scaling
+      alpha[, 1] <- pi0 * exp(log_lik[, 1])
+      c_scale[1] <- 1 / sum(alpha[, 1])
+      alpha[, 1] <- alpha[, 1] * c_scale[1]
+
+      if (T_len > 1) {
+        for (t in 2:T_len) {
+          alpha[, t] <- (alpha[, t - 1] %*% Pi) * exp(log_lik[, t])
+          c_scale[t] <- 1 / sum(alpha[, t])
+          alpha[, t] <- alpha[, t] * c_scale[t]
+        }
+      }
+
+      log_likelihood <- -sum(log(c_scale))
+
+      # Backward pass
+      beta[, T_len] <- 1
+      if (T_len > 1) {
+        for (t in (T_len - 1):1) {
+          beta[, t] <- Pi %*% (beta[, t + 1] * exp(log_lik[, t + 1]))
+          beta[, t] <- beta[, t] * c_scale[t + 1]
+        }
+      }
+
+      gamma <- alpha * beta
+
+      xi <- array(0, c(K, K, max(T_len - 1, 1)))
+      if (T_len > 1) {
+        for (t in 1:(T_len - 1)) {
+          temp <- (alpha[, t] %*% t(beta[, t + 1] * exp(log_lik[, t + 1]))) * Pi
+          xi[, , t] <- temp / sum(temp)
+        }
+      } else {
+        xi <- array(numeric(0), c(K, K, 0))
+      }
+
+      private$.S_gamma <- gamma
+      private$.S_xi <- xi
+
+      return(list(gamma = gamma, xi = xi, log_likelihood = log_likelihood))
     },
 
     # Update U and V factors
