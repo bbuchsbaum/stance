@@ -459,10 +459,22 @@ print.ContinuousBayesianDecoder <- function(x, ...) {
   invisible(x)
 }
 
+#' Summarize a ContinuousBayesianDecoder object
+#'
+#' Displays model summary statistics and average posterior state
+#' probabilities.
+#'
+#' @param object A \code{ContinuousBayesianDecoder} instance.
+#' @param ... Additional arguments (ignored).
+#' @return Invisibly returns \code{object}.
 #' @export
 summary.ContinuousBayesianDecoder <- function(object, ...) {
   print(object)
-  # TODO: Add more detailed summary information
+  cat("\nAverage state probabilities:\n")
+  state_probs <- object$get_state_posteriors()
+  avg_probs <- round(rowMeans(state_probs), 4)
+  print(avg_probs)
+  invisible(object)
 }
 
 #' @export
@@ -474,4 +486,32 @@ as.list.ContinuousBayesianDecoder <- function(x, ...) {
     hrf_estimates = x$get_hrf_estimates(),
     convergence = x$get_convergence()
   )
+}
+
+#' Extract model coefficients from a ContinuousBayesianDecoder
+#'
+#' Returns the main model parameters as a named list.
+#'
+#' @param object A \code{ContinuousBayesianDecoder} instance.
+#' @param ... Additional arguments (ignored).
+#' @return Named list of parameters (U, V, Pi, pi0, sigma2, H_v).
+#' @export
+coef.ContinuousBayesianDecoder <- function(object, ...) {
+  object$get_parameters()
+}
+
+#' Compute fitted values for a ContinuousBayesianDecoder
+#'
+#' Reconstructs the expected data matrix \eqn{\hat{Y} = W (h \star S_\gamma)}.
+#'
+#' @param object A \code{ContinuousBayesianDecoder} instance.
+#' @param ... Additional arguments (ignored).
+#' @return Matrix of fitted values (voxels x time).
+#' @export
+fitted.ContinuousBayesianDecoder <- function(object, ...) {
+  W <- object$get_spatial_maps(as_neurovol = FALSE)
+  states <- object$get_state_posteriors()
+  hrf <- object$.__enclos_env__$private$.hrf_kernel
+  H_star_S <- convolve_with_hrf(states, hrf)
+  W %*% H_star_S
 }
