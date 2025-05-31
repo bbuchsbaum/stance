@@ -1,0 +1,60 @@
+---
+title: "Getting Started with stance"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with stance}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+`stance` provides two complementary continuous decoding algorithms for fMRI data:
+
+* **Continuous Linear Decoder (CLD)** – a fast deterministic approach using GLM+SVD and FISTA.
+* **Continuous Bayesian Decoder (CBD)** – a probabilistic model with a hidden Markov prior and low-rank spatial factors.
+
+This vignette demonstrates basic usage of both methods and offers guidance on choosing between them.
+
+## Simulated Data
+
+```{r}
+library(stance)
+
+# simulate small dataset
+sim <- simulate_fmri_data(V = 200, T = 100, K = 3, algorithm = "CBD")
+```
+
+## Continuous Linear Decoder
+
+```{r}
+cld <- ContinuousLinearDecoder$new(
+  Y = sim$Y,
+  S_design = sim$S,
+  hrf = "spmg1",
+  rank = 10,
+  lambda_tv = 0.01,
+  verbose = TRUE
+)
+cld$fit(max_iter = 50)
+plot(cld, type = "convergence")
+```
+
+## Continuous Bayesian Decoder
+
+```{r}
+cbd <- ContinuousBayesianDecoder$new(
+  Y = sim$Y,
+  K = 3,
+  r = 10,
+  hrf_basis = "canonical"
+)
+cbd$fit(max_iter = 50)
+cbd$plot_convergence()
+```
+
+## Choosing Between CLD and CBD
+
+Use **CLD** when a reliable design matrix is available and fast deterministic estimation is desired. Choose **CBD** when state boundaries are unknown or when uncertainty estimates about the latent states are important.
+
+
