@@ -88,11 +88,18 @@ forward_backward_cpp <- forward_backward_r
 #' @keywords internal
 update_spatial_components_r <- function(Y, S_gamma, H_v, hrf_basis, current_U, current_V) {
   r <- ncol(current_U)
-  cross <- Y %*% t(S_gamma)
+
+  # Use current expectation of HRFs
+  hrf_avg <- as.vector(hrf_basis %*% colMeans(H_v))
+
+  HX <- convolve_with_hrf(S_gamma, hrf_avg)
+  cross <- Y %*% t(HX)
+
   sv <- svd(cross, nu = r, nv = r)
   U_new <- sv$u[, seq_len(r), drop = FALSE]
   V_new <- sv$v[, seq_len(r), drop = FALSE]
   V_new <- V_new * matrix(sv$d[seq_len(r)], nrow = nrow(V_new), ncol = r, byrow = TRUE)
+
   list(U = U_new, V = V_new)
 }
 

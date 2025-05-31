@@ -218,15 +218,21 @@ compute_elbo <- function(Y, vb_params, params, config) {
     L_gmrf = params$L_gmrf,
     lambda_H_prior = params$lambda_H_prior
   )
-  
+
+  hrf_prior_term <- -0.5 * params$lambda_H_prior * sum(params$H_v^2)
+
   # Entropy terms
   entropy_term <- compute_entropy_term(
     S_gamma = vb_params$S_gamma,
     S_xi = vb_params$S_xi
   )
-  
+
   elbo <- likelihood_term + hmm_prior_term + gmrf_prior_term + entropy_term
-  
+
+  if (!is.null(config$elbo_full) && config$elbo_full) {
+    elbo <- elbo + hrf_prior_term
+  }
+
   return(elbo)
 }
 
@@ -298,17 +304,16 @@ update_noise_variance <- function(Y, S_gamma, U, V, H_v, hrf_basis, prior_sigma2
 
 #' @keywords internal
 compute_data_likelihood_term <- function(Y, S_gamma, U, V, H_v, hrf_basis, sigma2) {
-  # Compute expected log likelihood under variational distribution
+  # Compute expected log likelihood using current HRF estimates
   V_voxels <- nrow(Y)
   T <- ncol(Y)
 
-  # Precompute spatial maps (V x K)
+  hrf <- as.vector(hrf_basis %*% colMeans(H_v))
+  HX <- convolve_with_hrf(S_gamma, hrf)
+
   W <- U %*% t(V)
+  Y_hat <- W %*% HX
 
-  # Expected reconstruction for all time points
-  Y_hat <- W %*% S_gamma
-
-  # Reconstruction error
   reconstruction_error <- sum((Y - Y_hat)^2)
 
   # Log-likelihood (up to constant)
@@ -369,9 +374,11 @@ compute_entropy_term <- function(S_gamma, S_xi) {
 #' @keywords internal
 compute_residual_sum_squares <- function(Y, S_gamma, U, V, H_v, hrf_basis) {
 
-  # Compute expected residual sum of squares using matrix operations
+  hrf <- as.vector(hrf_basis %*% colMeans(H_v))
+  HX <- convolve_with_hrf(S_gamma, hrf)
+
   W <- U %*% t(V)
-  Y_hat <- W %*% S_gamma
+  Y_hat <- W %*% HX
   return(sum((Y - Y_hat)^2))
   
   # Alternative implementation below (currently unused)
