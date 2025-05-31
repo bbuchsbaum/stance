@@ -118,6 +118,9 @@ test_that("hrf_convolution_matrix creates correct Toeplitz structure", {
   conv_mat_dense <- hrf_convolution_matrix(hrf, n_time, sparse = FALSE)
   expect_true(is.matrix(conv_mat_dense))
   expect_equal(dim(conv_mat_dense), c(n_time, n_time))
+
+  # Sparse and dense representations should be identical element-wise
+  expect_equal(as.matrix(conv_mat_sparse), conv_mat_dense)
   
   # Check Toeplitz structure
   # First column should have HRF at the beginning
