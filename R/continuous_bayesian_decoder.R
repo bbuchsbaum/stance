@@ -380,7 +380,38 @@ ContinuousBayesianDecoder <- R6::R6Class(
     
     # Update spatial components (placeholder implementations)
     .update_spatial_components = function() {
-      # TODO: Implement spatial component updates
+      Y <- private$.Y_data
+      U <- private$.U
+      Vmat <- private$.V
+      hrf <- private$.hrf_kernel
+      gamma <- private$.S_gamma
+
+      lambda <- 1e-6
+
+      # Expected design in time domain
+      H_star_S <- convolve_with_hrf(gamma, hrf)
+
+      # Low-rank representation in projected space
+      X_expected <- t(Vmat) %*% H_star_S
+
+      # Update V rows via ridge regression
+      UU <- crossprod(U) + diag(lambda, ncol(U))
+      UU_inv <- solve(UU)
+      for (k in seq_len(private$.K)) {
+        rhs <- crossprod(U, Y %*% H_star_S[k, ])
+        Vmat[k, ] <- as.numeric(UU_inv %*% rhs)
+      }
+
+      # Update U using expected low-rank signal
+      XX <- X_expected %*% t(X_expected) + diag(lambda, nrow(X_expected))
+      U_new <- Y %*% t(X_expected) %*% solve(XX)
+
+      # Orthonormalize columns
+      U_new <- project_orthogonal(U_new)
+
+      private$.U <- U_new
+      private$.V <- Vmat
+      private$.Y_proj <- crossprod(U_new, Y)
     },
     
     .update_hrf_coefficients = function() {
@@ -388,11 +419,33 @@ ContinuousBayesianDecoder <- R6::R6Class(
     },
     
     .update_hmm_parameters = function() {
-      # TODO: Implement HMM parameter updates
+      gamma <- private$.S_gamma
+      xi <- private$.S_xi
+
+      pseudocount <- 1e-3
+      K <- private$.K
+
+      # Update initial distribution
+      pi0 <- gamma[, 1]
+      pi0 <- pi0 / sum(pi0)
+
+      # Transition matrix
+      xi_sum <- apply(xi, c(1, 2), sum)
+      gamma_sum <- rowSums(gamma[, -ncol(gamma), drop = FALSE])
+      Pi <- sweep(xi_sum + pseudocount, 1, gamma_sum + K * pseudocount, "/")
+      Pi <- Pi / rowSums(Pi)
+
+      private$.Pi <- Pi
+      private$.pi0 <- pi0
     },
-    
+
     .update_noise_variance = function() {
-      # TODO: Implement noise variance updates
+      W <- private$.U %*% t(private$.V)
+      HX <- convolve_with_hrf(private$.S_gamma, private$.hrf_kernel)
+      Y_hat <- W %*% HX
+
+      resid <- private$.Y_data - Y_hat
+      private$.sigma2 <- mean(resid^2)
     },
 
     # Compute ELBO
