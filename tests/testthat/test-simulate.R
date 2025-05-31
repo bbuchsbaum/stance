@@ -224,3 +224,20 @@ test_that("determine_spatial_dims finds reasonable dimensions", {
   # Since 997 is prime, it should find the closest factorization
   expect_true(abs(prod(dims3) - 997) <= 3)  # Allow small difference
 })
+
+test_that("simulate_fmri_data respects custom Markov parameters", {
+  trans_mat <- matrix(c(0.9, 0.05, 0.05,
+                        0.05, 0.9, 0.05,
+                        0.05, 0.05, 0.9), 3, 3, byrow = TRUE)
+  init_prob <- c(0.6, 0.3, 0.1)
+  sim <- simulate_fmri_data(V = 50, T = 40, K = 3,
+                            algorithm = "CBD",
+                            transition_matrix = trans_mat,
+                            pi0 = init_prob,
+                            verbose = FALSE)
+  expect_equal(sim$Pi, trans_mat)
+  expect_equal(sim$pi0, init_prob / sum(init_prob))
+  expect_equal(dim(sim$S), c(3, 40))
+  # Ensure only one state active per time point
+  expect_equal(colSums(sim$S), rep(1, 40))
+})
