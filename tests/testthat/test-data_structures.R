@@ -123,3 +123,26 @@ test_that("create_output_structure works for both algorithms", {
   expect_true(!is.null(cbd_out$uncertainty))
   expect_true(!is.null(cbd_out$posterior_params))
 })
+
+test_that("restore_spatial_structure errors on dimension mismatch", {
+  skip_if_not_installed("neuroim2")
+
+  # Reference with space only
+  space_obj <- neuroim2::NeuroSpace(dim = c(2, 2, 2, 5))
+  mat_bad <- matrix(rnorm(10 * 5), nrow = 10, ncol = 5)
+  ref_space <- list(space = space_obj)
+
+  expect_error(
+    restore_spatial_structure(mat_bad, ref_space, output_type = "temporal"),
+    "10 rows.*8 voxels"
+  )
+
+  # Reference with mask
+  mask <- rep(TRUE, 5)
+  ref_mask <- list(space = space_obj, mask = mask)
+
+  expect_error(
+    restore_spatial_structure(mat_bad, ref_mask, output_type = "temporal"),
+    "10 rows.*5 voxels"
+  )
+})
