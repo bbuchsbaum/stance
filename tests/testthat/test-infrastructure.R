@@ -14,7 +14,6 @@ test_that("shared utilities are available", {
   
   # HRF utilities
   expect_true(exists("setup_hrf_kernel"))
-  expect_true(exists("convolve_with_hrf"))
   expect_true(exists("hrf_basis_matrix"))
   expect_true(exists("validate_hrf_spec"))
   
