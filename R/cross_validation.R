@@ -10,7 +10,11 @@
 #' @param lambda_h_values Candidate GMRF precision values
 #' @param n_folds Number of folds
 #' @param metric Scoring metric (currently ignored)
-#' @param use_parallel Use parallel computation via the future package
+#' @param use_parallel Use parallel computation via the future package.
+#'
+#' When `use_parallel` is `TRUE`, the current `future` plan is saved,
+#' `future::multisession` is used for the duration of cross-validation and the
+#' original plan is restored on exit.
 #'
 #' @return List with the CV results, best parameter combination and a
 #'   textual recommendation.
@@ -28,7 +32,9 @@ cbd_cross_validate <- function(Y, mask = NULL,
   if (use_parallel &&
       requireNamespace("future", quietly = TRUE) &&
       requireNamespace("future.apply", quietly = TRUE)) {
+    old_plan <- future::plan()
     future::plan(future::multisession, workers = min(n_folds, 4))
+    on.exit(future::plan(old_plan), add = TRUE)
     lapply_fun <- future.apply::future_lapply
   } else {
     if (use_parallel) {

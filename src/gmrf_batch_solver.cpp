@@ -42,6 +42,7 @@ MatrixXd solve_gmrf_batched(const SparseMatrix<double>& XtX,
       SparseMatrix<double> I(block_v, block_v);
       I.setIdentity();
       solver.compute(Q_block + tol * I);
+
       if (solver.info() != Eigen::Success) {
         Rcpp::stop("Cholesky failed in block %d", b);
       }
