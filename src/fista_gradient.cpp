@@ -17,7 +17,8 @@ arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
                                               const arma::mat& WtW,
                                               const arma::mat& H_star_X,
                                               const arma::vec& hrf_kernel,
-                                              int n_threads);
+                                              int n_threads = 0);
+
 
 
 //' Compute FISTA Gradient for CLD
@@ -87,8 +88,8 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
 
     // Apply transposed convolution with time-reversed HRF
     // Use automatic thread detection (0) for optimal parallelization
-    arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel,
-                                                n_threads);
+    arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, n_threads);
+
     return -Grad_L2;
 
   } else {
@@ -145,9 +146,8 @@ arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
   // Apply transposed convolution with time-reversed HRF
 
   // This is the gradient with respect to X (before convolution)
-  arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel,
-                                              n_threads);
-  
+
+  arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, n_threads);
 
   return -Grad_L2;
 }
