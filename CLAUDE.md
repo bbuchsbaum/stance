@@ -97,7 +97,7 @@ The package leverages fmrireg for HRF modeling and convolution operations:
 ## Important Notes
 
 - The package uses `renv` for dependency management. Run `renv::restore()` to set up the environment.
-- C++ implementations are planned but not yet implemented (src/ directory is empty).
+- C++ implementations now exist in `src/`, including `fista_solver.cpp` for optimization and `log_likelihood.cpp` for computing likelihoods.
 - The main implementation is in `R/continuous_bayesian_decoder.R`.
 - Sprint planning documents in `data-raw/` outline the development roadmap.
 - When implementing new features, follow the existing R6 method structure and update the variational Bayes inference accordingly.
