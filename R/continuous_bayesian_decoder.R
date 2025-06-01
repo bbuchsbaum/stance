@@ -605,9 +605,6 @@ ContinuousBayesianDecoder <- R6::R6Class(
     },
 
     .update_H_v_gmrf = function() {
-      if (!exists("convolve_with_hrf")) {
-        source("R/hrf_utils.R")
-      }
       H_ls <- update_hrf_coefficients_r(
         Y = private$.Y_data,
         S_gamma = private$.S_gamma,
