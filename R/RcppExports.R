@@ -90,12 +90,14 @@ convolve_rows_rcpp <- function(X, hrf, n_threads = 0L) {
 #' Voxel-specific HRF convolution
 #'
 #' Performs convolution of each row of `design` with each voxel's HRF.
-#' Currently always uses direct convolution; `fft_threshold` is kept
-#' for compatibility with unit tests.
+#' Uses direct convolution for short series and automatically switches
+#' to FFT-based convolution when the number of time points exceeds
+#' `fft_threshold`.
 #'
 #' @param design Matrix of regressors (K x T)
 #' @param hrfs   Matrix of HRF kernels (V x L)
-#' @param fft_threshold Integer threshold for FFT (default 256)
+#' @param fft_threshold Integer threshold for FFT (default 256);
+#'   FFT is used when `ncol(design)` exceeds this value
 #' @param n_threads Number of threads to use (0 = auto)
 #'
 #' @return 3D array (V x K x T)

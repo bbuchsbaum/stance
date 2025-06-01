@@ -14,20 +14,26 @@
 using namespace Rcpp;
 using namespace arma;
 
+// forward declaration of FFT helper implemented in convolution_fft.cpp
+arma::cube convolve_voxel_hrf_fft_rcpp(const arma::mat& design,
+                                       const arma::mat& hrfs,
+                                       int n_threads = 0);
+
 //' Convolve design matrix with voxel-specific HRFs
 //'
 //' Each voxel can have a different HRF kernel. The design matrix has
 //' state regressors in rows. This function performs convolution of each
 //' state's regressor with the corresponding voxel HRF for all voxels.
 //'
-//' The current implementation always uses direct time-domain
-//' convolution. The `fft_threshold` argument is accepted for future
-//' FFT-based implementation and allows tests to force the direct path.
+//' Uses direct time-domain convolution for short series and switches
+//' to FFT-based convolution when `T > fft_threshold`. The FFT path
+//' reuses `convolve_voxel_hrf_fft_rcpp` defined in `convolution_fft.cpp`.
 //' When compiled with OpenMP the convolution loops run in parallel.
 //'
 //' @param design Matrix of regressors (K x T)
 //' @param hrfs   Matrix of HRF kernels (V x L)
-//' @param fft_threshold Integer threshold for using FFT (unused for now)
+//' @param fft_threshold Integer threshold for using FFT;
+//'   FFT is used when the number of time points exceeds this value
 //' @param n_threads Number of OpenMP threads (0 = all available)
 //'
 //' @return A cube with dimensions (V x K x T)
@@ -57,11 +63,14 @@ arma::cube convolve_voxel_hrf_rcpp(const arma::mat& design,
   (void)n_threads; // suppress warning
 #endif
 
+  bool use_fft = (T > fft_threshold);
+  if (use_fft) {
+    // delegate to FFT helper for large T
+    return convolve_voxel_hrf_fft_rcpp(design, hrfs, n_threads);
+  }
+
   // output cube
   arma::cube result(V, K, T, fill::zeros);
-
-  bool use_fft = (T > fft_threshold);
-  (void)use_fft; // currently unused
 
 #ifdef _OPENMP
 #pragma omp parallel for
