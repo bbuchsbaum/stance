@@ -185,6 +185,14 @@ test_that("HRF convolution handles edge cases", {
   expect_equal(dim(result_multi), dim(X))
 })
 
+test_that("convolve_with_hrf matches C++ implementation for small matrices", {
+  X <- matrix(rnorm(6 * 10), nrow = 6)
+  hrf <- c(0.2, 0.5, 0.3)
+  r_result <- convolve_with_hrf(X, hrf, method = "direct")
+  cpp_result <- stance:::convolve_rows_rcpp(X, hrf)
+  expect_equal(r_result, cpp_result)
+})
+
 test_that("Gradient computation is numerically stable", {
   skip_if_not(exists("compute_gradient_fista_precomp_rcpp"), "Rcpp functions not compiled")
   
