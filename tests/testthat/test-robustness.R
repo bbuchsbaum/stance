@@ -218,6 +218,24 @@ test_that("Gradient computation is numerically stable", {
   expect_true(all(is.finite(grad)))
 })
 
+test_that("Gradient computation consistent across threads", {
+  skip_if_not(exists("compute_gradient_fista_precomp_rcpp"), "Rcpp functions not compiled")
+
+  set.seed(123)
+  W <- matrix(rnorm(9), 3, 3)
+  X <- matrix(rnorm(3 * 10), 3, 10)
+  hrf <- c(0.2, 0.5, 0.3)
+
+  H_star_X <- stance:::convolve_rows_rcpp(X, hrf, n_threads = 1L)
+  WtW <- t(W) %*% W
+  WtY <- WtW %*% H_star_X
+
+  grad1 <- stance:::compute_gradient_fista_precomp_rcpp(WtY, WtW, H_star_X, hrf, n_threads = 1L)
+  grad2 <- stance:::compute_gradient_fista_precomp_rcpp(WtY, WtW, H_star_X, hrf, n_threads = 2L)
+
+  expect_equal(grad1, grad2, tolerance = 1e-8)
+})
+
 test_that("Convergence checking works correctly", {
   # Test convergence detection
   values_converging <- c(100, 50, 30, 25, 24, 23.5, 23.4, 23.35, 23.34, 23.34)
