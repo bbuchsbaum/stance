@@ -27,6 +27,8 @@ test_that("get_spatial_neighbors works with NeuroVol mask", {
   vol <- neuroim2::NeuroVol(mask_arr, neuroim2::NeuroSpace(c(2,2,1)))
   info <- get_spatial_neighbors(vol)
   expect_equal(length(info$neighbors), 4)
+  expect_equal(info$neighbors,
+               list(c(2L,3L), c(1L,4L), c(4L,1L), c(3L,2L)))
   L <- create_gmrf_laplacian(info$neighbors, length(info$neighbors))
   expect_true(Matrix::isSymmetric(L))
   expect_equal(Matrix::rowSums(L), rep(0, 4))
@@ -37,6 +39,7 @@ test_that("get_spatial_neighbors handles logical mask", {
   info <- get_spatial_neighbors(mask)
   L <- create_gmrf_laplacian(info$neighbors, length(info$neighbors))
   expect_equal(dim(L), c(2,2))
+  expect_equal(info$neighbors, list(2L,1L))
   expect_true(Matrix::isSymmetric(L))
   expect_equal(Matrix::rowSums(L), rep(0, 2))
 })
