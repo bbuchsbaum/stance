@@ -12,6 +12,9 @@
 #' @param metric Scoring metric (currently ignored)
 #' @param use_parallel Use parallel computation via the future package
 #'
+#' When parallel execution is enabled, the existing `future` plan is
+#' saved and restored after cross-validation completes.
+#'
 #' @return List with the CV results, best parameter combination and a
 #'   textual recommendation.
 #' @export
@@ -28,6 +31,8 @@ cbd_cross_validate <- function(Y, mask = NULL,
   if (use_parallel &&
       requireNamespace("future", quietly = TRUE) &&
       requireNamespace("future.apply", quietly = TRUE)) {
+    old_plan <- future::plan()
+    on.exit(future::plan(old_plan), add = TRUE)
     future::plan(future::multisession, workers = min(n_folds, 4))
     lapply_fun <- future.apply::future_lapply
   } else {
