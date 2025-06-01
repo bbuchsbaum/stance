@@ -96,11 +96,16 @@ create_chain_laplacian <- function(n_voxels) {
 #' @export
 compute_roughness <- function(H, L) {
   if (!is.matrix(H)) H <- as.matrix(H)
-  total <- 0
-  for (b in seq_len(ncol(H))) {
-    h <- H[, b]
-    total <- total + as.numeric(t(h) %*% L %*% h)
+
+  LH <- L %*% H
+  use_ms <- requireNamespace("matrixStats", quietly = TRUE)
+
+  rough_vals <- if (use_ms) {
+    matrixStats::colSums2(LH * H)
+  } else {
+    colSums(LH * H)
   }
-  total / ncol(H)
+
+  mean(rough_vals)
 }
 
