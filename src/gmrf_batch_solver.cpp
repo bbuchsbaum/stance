@@ -36,8 +36,16 @@ MatrixXd solve_gmrf_batched(const SparseMatrix<double>& XtX,
 
     Eigen::SimplicialLDLT<SparseMatrix<double>> solver;
     solver.compute(Q_block);
+
     if (solver.info() != Eigen::Success) {
-      Rcpp::Rcerr << "Cholesky failed in block " << b << std::endl;
+      // Try adding a small diagonal regularization and recompute
+      SparseMatrix<double> Q_reg = Q_block;
+      Q_reg.diagonal().array() += tol;
+      solver.compute(Q_reg);
+
+      if (solver.info() != Eigen::Success) {
+        Rcpp::stop("Cholesky failed in block %d", b);
+      }
     }
 
     MatrixXd RHS = XtY.block(start, 0, block_v, L_basis);
