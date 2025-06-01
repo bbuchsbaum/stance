@@ -135,7 +135,7 @@ ContinuousLinearDecoder <- R6::R6Class(
     #' @param verbose Logical, print iteration progress
     #'
     #' @return Self (invisibly) for method chaining
-    fit = function(max_iter = 100, tol = 1e-4, verbose = FALSE) {
+    fit = function(max_iter = 100, tol = 1e-4, verbose = FALSE, n_threads = 0L) {
       # Check if initialized
       if (!private$.use_low_rank && is.null(private$.W)) {
         stop("Model not initialized. Call $new() first.")
@@ -156,7 +156,8 @@ ContinuousLinearDecoder <- R6::R6Class(
       
       # Run FISTA optimization
       tryCatch({
-        private$.fista_tv(max_iter = max_iter, tol = tol, verbose = verbose)
+        private$.fista_tv(max_iter = max_iter, tol = tol, verbose = verbose,
+                          n_threads = n_threads)
         
         if (verbose) {
           cat("\nFISTA optimization complete.\n")
@@ -451,7 +452,7 @@ ContinuousLinearDecoder <- R6::R6Class(
     },
     
     #' Run FISTA optimization
-    .fista_tv = function(max_iter, tol, verbose) {
+    .fista_tv = function(max_iter, tol, verbose, n_threads = 0L) {
       # Check prerequisites
       if (is.null(private$.WtY) || is.null(private$.hrf)) {
         stop("Model not properly initialized. Run initialize() first.")
@@ -470,7 +471,8 @@ ContinuousLinearDecoder <- R6::R6Class(
         X_init = private$.X_hat,  # Use current X_hat as initialization
         max_iter = max_iter,
         tol = tol,
-        verbose = verbose
+        verbose = verbose,
+        n_threads = n_threads
       )
       
       # Store results

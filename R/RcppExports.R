@@ -16,8 +16,8 @@
 #' @return Gradient matrix (K x T)
 #' 
 #' @export
-compute_gradient_fista_rcpp <- function(Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY = FALSE, WtW_precomp) {
-    .Call(`_stance_compute_gradient_fista_rcpp`, Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY, WtW_precomp)
+compute_gradient_fista_rcpp <- function(Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY = FALSE, WtW_precomp, n_threads = 0L) {
+    .Call(`_stance_compute_gradient_fista_rcpp`, Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY, WtW_precomp, n_threads)
 }
 
 #' Compute FISTA Gradient with Pre-computed Terms
@@ -33,8 +33,8 @@ compute_gradient_fista_rcpp <- function(Y_or_WtY, W, H_star_X, hrf_kernel, preco
 #' @return Gradient matrix (K x T)
 #'
 #' @export
-compute_gradient_fista_precomp_rcpp <- function(WtY, WtW, H_star_X, hrf_kernel) {
-    .Call(`_stance_compute_gradient_fista_precomp_rcpp`, WtY, WtW, H_star_X, hrf_kernel)
+compute_gradient_fista_precomp_rcpp <- function(WtY, WtW, H_star_X, hrf_kernel, n_threads = 0L) {
+    .Call(`_stance_compute_gradient_fista_precomp_rcpp`, WtY, WtW, H_star_X, hrf_kernel, n_threads)
 }
 
 #' Transposed Convolution Helper
@@ -138,8 +138,8 @@ convolve_voxel_hrf_fft_rcpp <- function(design, hrfs, n_threads = 0L) {
 #'   - iterations: Number of iterations performed
 #' 
 #' @export
-fista_tv_rcpp <- function(WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter = 100L, tol = 1e-4, verbose = FALSE) {
-    .Call(`_stance_fista_tv_rcpp`, WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter, tol, verbose)
+fista_tv_rcpp <- function(WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter = 100L, tol = 1e-4, verbose = FALSE, n_threads = 0L) {
+    .Call(`_stance_fista_tv_rcpp`, WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter, tol, verbose, n_threads)
 }
 
 #' Compute CLD Objective Function
