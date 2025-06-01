@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // compute_gradient_fista_rcpp
-arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY, const arma::mat& W, const arma::mat& H_star_X, const arma::vec& hrf_kernel, bool precomputed_WtY, const arma::mat& WtW_precomp);
-RcppExport SEXP _stance_compute_gradient_fista_rcpp(SEXP Y_or_WtYSEXP, SEXP WSEXP, SEXP H_star_XSEXP, SEXP hrf_kernelSEXP, SEXP precomputed_WtYSEXP, SEXP WtW_precompSEXP) {
+arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY, const arma::mat& W, const arma::mat& H_star_X, const arma::vec& hrf_kernel, bool precomputed_WtY, const arma::mat& WtW_precomp, int n_threads);
+RcppExport SEXP _stance_compute_gradient_fista_rcpp(SEXP Y_or_WtYSEXP, SEXP WSEXP, SEXP H_star_XSEXP, SEXP hrf_kernelSEXP, SEXP precomputed_WtYSEXP, SEXP WtW_precompSEXP, SEXP n_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -23,7 +23,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::vec& >::type hrf_kernel(hrf_kernelSEXP);
     Rcpp::traits::input_parameter< bool >::type precomputed_WtY(precomputed_WtYSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type WtW_precomp(WtW_precompSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_gradient_fista_rcpp(Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY, WtW_precomp));
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_gradient_fista_rcpp(Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY, WtW_precomp, n_threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -58,8 +59,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // compute_gradient_fista_precomp_rcpp
-arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY, const arma::mat& WtW, const arma::mat& H_star_X, const arma::vec& hrf_kernel);
-RcppExport SEXP _stance_compute_gradient_fista_precomp_rcpp(SEXP WtYSEXP, SEXP WtWSEXP, SEXP H_star_XSEXP, SEXP hrf_kernelSEXP) {
+arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY, const arma::mat& WtW, const arma::mat& H_star_X, const arma::vec& hrf_kernel, int n_threads);
+RcppExport SEXP _stance_compute_gradient_fista_precomp_rcpp(SEXP WtYSEXP, SEXP WtWSEXP, SEXP H_star_XSEXP, SEXP hrf_kernelSEXP, SEXP n_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -67,7 +68,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type WtW(WtWSEXP);
     Rcpp::traits::input_parameter< const arma::mat& >::type H_star_X(H_star_XSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type hrf_kernel(hrf_kernelSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_gradient_fista_precomp_rcpp(WtY, WtW, H_star_X, hrf_kernel));
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_gradient_fista_precomp_rcpp(WtY, WtW, H_star_X, hrf_kernel, n_threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -127,8 +129,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // fista_tv_rcpp
-List fista_tv_rcpp(const arma::mat& WtY, const arma::mat& W, const arma::vec& hrf_kernel, double lambda_tv, double L_fista, const arma::mat& X_init, int max_iter, double tol, bool verbose);
-RcppExport SEXP _stance_fista_tv_rcpp(SEXP WtYSEXP, SEXP WSEXP, SEXP hrf_kernelSEXP, SEXP lambda_tvSEXP, SEXP L_fistaSEXP, SEXP X_initSEXP, SEXP max_iterSEXP, SEXP tolSEXP, SEXP verboseSEXP) {
+List fista_tv_rcpp(const arma::mat& WtY, const arma::mat& W, const arma::vec& hrf_kernel, double lambda_tv, double L_fista, const arma::mat& X_init, int max_iter, double tol, bool verbose, int n_threads);
+RcppExport SEXP _stance_fista_tv_rcpp(SEXP WtYSEXP, SEXP WSEXP, SEXP hrf_kernelSEXP, SEXP lambda_tvSEXP, SEXP L_fistaSEXP, SEXP X_initSEXP, SEXP max_iterSEXP, SEXP tolSEXP, SEXP verboseSEXP, SEXP n_threadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -141,7 +143,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
     Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
-    rcpp_result_gen = Rcpp::wrap(fista_tv_rcpp(WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter, tol, verbose));
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(fista_tv_rcpp(WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter, tol, verbose, n_threads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -405,12 +408,12 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_stance_compute_gradient_fista_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_rcpp, 6},
-    {"_stance_compute_gradient_fista_precomp_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_precomp_rcpp, 4},
+    {"_stance_compute_gradient_fista_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_rcpp, 7},
+    {"_stance_compute_gradient_fista_precomp_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_precomp_rcpp, 5},
     {"_stance_convolve_transpose_rcpp", (DL_FUNC) &_stance_convolve_transpose_rcpp, 3},
     {"_stance_estimate_lipschitz_rcpp", (DL_FUNC) &_stance_estimate_lipschitz_rcpp, 4},
     {"_stance_convolve_rows_rcpp", (DL_FUNC) &_stance_convolve_rows_rcpp, 3},
-    {"_stance_fista_tv_rcpp", (DL_FUNC) &_stance_fista_tv_rcpp, 9},
+    {"_stance_fista_tv_rcpp", (DL_FUNC) &_stance_fista_tv_rcpp, 10},
     {"_stance_compute_objective_rcpp", (DL_FUNC) &_stance_compute_objective_rcpp, 5},
     {"_stance_estimate_lipschitz_lowrank_rcpp", (DL_FUNC) &_stance_estimate_lipschitz_lowrank_rcpp, 4},
     {"_stance_compute_WtY_lowrank_rcpp", (DL_FUNC) &_stance_compute_WtY_lowrank_rcpp, 4},

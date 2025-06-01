@@ -166,7 +166,9 @@ ContinuousBayesianDecoder <- R6::R6Class(
       } else {
         T_total <- private$.T
         if (batch_size > T_total) {
+
           stop("batch_size must be less than or equal to the number of timepoints")
+
         }
         if (batch_size < 100 || batch_size > T_total/2) {
           warning("Batch size should be 100-150 for optimal performance")

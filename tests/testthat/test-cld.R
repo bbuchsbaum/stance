@@ -224,6 +224,26 @@ test_that("CLD fitting works (if Rcpp compiled)", {
   expect_true(any(X_hat != 0))
 })
 
+test_that("fista_tv_rcpp results are thread independent", {
+  skip_if_not(exists("fista_tv_rcpp"), "Rcpp functions not compiled")
+
+  set.seed(42)
+  V <- 10; T_len <- 30; K <- 2
+  W <- matrix(rnorm(V * K), V, K)
+  X_true <- matrix(rnorm(K * T_len), K, T_len)
+  hrf <- c(0.2, 0.5, 0.3)
+  Y <- W %*% stance:::convolve_rows_rcpp(X_true, hrf, n_threads = 1L)
+
+  WtY <- t(W) %*% Y
+  L <- stance:::estimate_lipschitz_rcpp(W, hrf)
+
+  init <- matrix(0, K, T_len)
+  res1 <- stance:::fista_tv_rcpp(WtY, W, hrf, 0.01, L, init, max_iter = 10L, tol = 1e-3, verbose = FALSE, n_threads = 1L)
+  res2 <- stance:::fista_tv_rcpp(WtY, W, hrf, 0.01, L, init, max_iter = 10L, tol = 1e-3, verbose = FALSE, n_threads = 2L)
+
+  expect_equal(res1$X_hat, res2$X_hat, tolerance = 1e-8)
+})
+
 test_that("CLD handles edge cases gracefully", {
   # Single state
   Y <- matrix(rnorm(100 * 50), 100, 50)

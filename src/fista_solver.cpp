@@ -14,7 +14,8 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
                                       const arma::mat& H_star_X,
                                       const arma::vec& hrf_kernel,
                                       bool precomputed_WtY,
-                                      const arma::mat& WtW_precomp = arma::mat());
+                                      const arma::mat& WtW_precomp = arma::mat(),
+                                      int n_threads = 0);
 
 arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv,
                               int n_threads);
@@ -22,7 +23,8 @@ arma::mat prox_tv_condat_rcpp(const arma::mat& X, double lambda_tv,
 arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
                                               const arma::mat& WtW,
                                               const arma::mat& H_star_X,
-                                              const arma::vec& hrf_kernel);
+                                              const arma::vec& hrf_kernel,
+                                              int n_threads = 0);
 
 
 
@@ -125,7 +127,8 @@ List fista_tv_rcpp(const arma::mat& WtY,
                    const arma::mat& X_init,
                    int max_iter = 100,
                    double tol = 1e-4,
-                   bool verbose = false) {
+                   bool verbose = false,
+                   int n_threads = 0) {
   
   // Input validation
   if (WtY.is_empty() || W.is_empty() || hrf_kernel.is_empty() || X_init.is_empty()) {
@@ -195,16 +198,17 @@ List fista_tv_rcpp(const arma::mat& WtY,
     
     // Compute gradient at Z
 
-    arma::mat H_star_Z = convolve_rows_rcpp(Z, hrf_kernel, 0);
+    arma::mat H_star_Z = convolve_rows_rcpp(Z, hrf_kernel, n_threads);
     arma::mat gradient = compute_gradient_fista_rcpp(WtY, W, H_star_Z,
-                                                     hrf_kernel, true, WtW);
+                                                     hrf_kernel, true, WtW,
+                                                     n_threads);
 
     
     // Gradient step
     arma::mat X_tilde = Z - step_size * gradient;
     
     // Proximal step (TV denoising)
-    X = prox_tv_condat_rcpp(X_tilde, step_size * lambda_tv, 0);
+    X = prox_tv_condat_rcpp(X_tilde, step_size * lambda_tv, n_threads);
     
     // Update momentum parameter
     t = (1.0 + std::sqrt(1.0 + 4.0 * t_old * t_old)) / 2.0;
@@ -216,7 +220,7 @@ List fista_tv_rcpp(const arma::mat& WtY,
     // Compute objective value (optional, for convergence check)
     if (iter % 10 == 0 || iter < 10) {
       // Compute residual
-      arma::mat H_star_X = convolve_rows_rcpp(X, hrf_kernel, 0);
+      arma::mat H_star_X = convolve_rows_rcpp(X, hrf_kernel, n_threads);
       arma::mat residual = WtY - WtW * H_star_X;
       double reconstruction_error = 0.5 * accu(square(residual));
       
