@@ -16,6 +16,9 @@
 #' `future::multisession` is used for the duration of cross-validation and the
 #' original plan is restored on exit.
 #'
+#' When parallel execution is enabled, the existing `future` plan is
+#' saved and restored after cross-validation completes.
+#'
 #' @return List with the CV results, best parameter combination and a
 #'   textual recommendation.
 #' @export
@@ -34,7 +37,7 @@ cbd_cross_validate <- function(Y, mask = NULL,
       requireNamespace("future.apply", quietly = TRUE)) {
     old_plan <- future::plan()
     future::plan(future::multisession, workers = min(n_folds, 4))
-    on.exit(future::plan(old_plan), add = TRUE)
+     on.exit(future::plan(old_plan), add = TRUE)
     lapply_fun <- future.apply::future_lapply
   } else {
     if (use_parallel) {
