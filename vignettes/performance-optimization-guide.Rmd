@@ -13,6 +13,7 @@ This vignette collects practical tips for maximising performance when fitting mo
 
 ## Key Recommendations
 
+
 1. **FFT Convolution**: signals longer than 256 time points automatically
    switch to FFT-based convolution (both in R and in the C++ helper
    `convolve_voxel_hrf_rcpp`) for efficiency.

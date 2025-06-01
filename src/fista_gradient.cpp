@@ -16,7 +16,9 @@ arma::mat convolve_transpose_rcpp(const arma::mat& X, const arma::vec& hrf,
 arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
                                               const arma::mat& WtW,
                                               const arma::mat& H_star_X,
-                                              const arma::vec& hrf_kernel);
+                                              const arma::vec& hrf_kernel,
+                                              int n_threads = 0);
+
 
 
 //' Compute FISTA Gradient for CLD
@@ -40,7 +42,8 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
                                       const arma::mat& H_star_X,
                                       const arma::vec& hrf_kernel,
                                       bool precomputed_WtY = false,
-                                      const arma::mat& WtW_precomp = arma::mat()) {
+                                      const arma::mat& WtW_precomp = arma::mat(),
+                                      int n_threads = 0) {
   
   // Input validation
   if (Y_or_WtY.is_empty() || W.is_empty() || H_star_X.is_empty() || hrf_kernel.is_empty()) {
@@ -85,7 +88,8 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
 
     // Apply transposed convolution with time-reversed HRF
     // Use automatic thread detection (0) for optimal parallelization
-    arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, 0);
+    arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, n_threads);
+
     return -Grad_L2;
 
   } else {
@@ -99,7 +103,8 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
 
     // Delegate to the simplified pre-computed interface
     return compute_gradient_fista_precomp_rcpp(Y_or_WtY, WtW,
-                                               H_star_X, hrf_kernel);
+                                               H_star_X, hrf_kernel,
+                                               n_threads);
   }
 }
 
@@ -120,7 +125,8 @@ arma::mat compute_gradient_fista_rcpp(const arma::mat& Y_or_WtY,
 arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
                                               const arma::mat& WtW,
                                               const arma::mat& H_star_X,
-                                              const arma::vec& hrf_kernel) {
+                                              const arma::vec& hrf_kernel,
+                                              int n_threads = 0) {
   // Input validation
   if (WtY.is_empty() || WtW.is_empty() || H_star_X.is_empty() ||
       hrf_kernel.is_empty()) {
@@ -140,8 +146,8 @@ arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY,
   // Apply transposed convolution with time-reversed HRF
 
   // This is the gradient with respect to X (before convolution)
-  arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, 0);
-  
+
+  arma::mat Grad_L2 = convolve_transpose_rcpp(Grad_term, hrf_kernel, n_threads);
 
   return -Grad_L2;
 }

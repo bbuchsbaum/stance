@@ -16,8 +16,8 @@
 #' @return Gradient matrix (K x T)
 #' 
 #' @export
-compute_gradient_fista_rcpp <- function(Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY = FALSE, WtW_precomp) {
-    .Call(`_stance_compute_gradient_fista_rcpp`, Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY, WtW_precomp)
+compute_gradient_fista_rcpp <- function(Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY = FALSE, WtW_precomp, n_threads = 0L) {
+    .Call(`_stance_compute_gradient_fista_rcpp`, Y_or_WtY, W, H_star_X, hrf_kernel, precomputed_WtY, WtW_precomp, n_threads)
 }
 
 #' Compute FISTA Gradient with Pre-computed Terms
@@ -33,8 +33,8 @@ compute_gradient_fista_rcpp <- function(Y_or_WtY, W, H_star_X, hrf_kernel, preco
 #' @return Gradient matrix (K x T)
 #'
 #' @export
-compute_gradient_fista_precomp_rcpp <- function(WtY, WtW, H_star_X, hrf_kernel) {
-    .Call(`_stance_compute_gradient_fista_precomp_rcpp`, WtY, WtW, H_star_X, hrf_kernel)
+compute_gradient_fista_precomp_rcpp <- function(WtY, WtW, H_star_X, hrf_kernel, n_threads = 0L) {
+    .Call(`_stance_compute_gradient_fista_precomp_rcpp`, WtY, WtW, H_star_X, hrf_kernel, n_threads)
 }
 
 #' Transposed Convolution Helper
@@ -96,7 +96,8 @@ convolve_rows_rcpp <- function(X, hrf, n_threads = 0L) {
 #'
 #' @param design Matrix of regressors (K x T)
 #' @param hrfs   Matrix of HRF kernels (V x L)
-#' @param fft_threshold Integer threshold for FFT (default 256)
+#' @param fft_threshold Integer threshold for FFT (default 256);
+#'   FFT is used when `ncol(design)` exceeds this value
 #' @param n_threads Number of threads to use (0 = auto)
 #'
 #' @return 3D array (V x K x T)
@@ -139,8 +140,8 @@ convolve_voxel_hrf_fft_rcpp <- function(design, hrfs, n_threads = 0L) {
 #'   - iterations: Number of iterations performed
 #' 
 #' @export
-fista_tv_rcpp <- function(WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter = 100L, tol = 1e-4, verbose = FALSE) {
-    .Call(`_stance_fista_tv_rcpp`, WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter, tol, verbose)
+fista_tv_rcpp <- function(WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter = 100L, tol = 1e-4, verbose = FALSE, n_threads = 0L) {
+    .Call(`_stance_fista_tv_rcpp`, WtY, W, hrf_kernel, lambda_tv, L_fista, X_init, max_iter, tol, verbose, n_threads)
 }
 
 #' Compute CLD Objective Function

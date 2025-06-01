@@ -14,6 +14,7 @@
 using namespace Rcpp;
 using namespace arma;
 
+
 // Forward declaration of the FFT helper implemented in
 // convolution_fft.cpp.  This allows us to reuse the optimised FFT path
 // when the time series is long enough.
@@ -27,6 +28,7 @@ arma::cube convolve_voxel_hrf_fft_rcpp(const arma::mat& design,
 //' state regressors in rows. This function performs convolution of each
 //' state's regressor with the corresponding voxel HRF for all voxels.
 //'
+
 //' Uses direct time-domain convolution by default but switches to an
 //' FFT-based implementation when the number of time points exceeds
 //' `fft_threshold`.  This mirrors the behaviour of the higher level R
@@ -36,7 +38,8 @@ arma::cube convolve_voxel_hrf_fft_rcpp(const arma::mat& design,
 //'
 //' @param design Matrix of regressors (K x T)
 //' @param hrfs   Matrix of HRF kernels (V x L)
-//' @param fft_threshold Integer threshold for using FFT (unused for now)
+//' @param fft_threshold Integer threshold for using FFT;
+//'   FFT is used when the number of time points exceeds this value
 //' @param n_threads Number of OpenMP threads (0 = all available)
 //'
 //' @return A cube with dimensions (V x K x T)
@@ -73,6 +76,7 @@ arma::cube convolve_voxel_hrf_rcpp(const arma::mat& design,
   }
 
   // Output cube for direct convolution
+
   arma::cube result(V, K, T, fill::zeros);
 
 #ifdef _OPENMP
