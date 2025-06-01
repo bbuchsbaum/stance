@@ -154,12 +154,8 @@ convolve_with_hrf <- function(X, hrf, use_fft_threshold = 256, method = "auto") 
         result[i, ] <- convolve_fft(X[i, ], hrf, H_fft = H_fft, n_fft = n_fft)
       }
     } else {
-      # Direct convolution
-      result <- matrix(0, n_signals, n_time)
-      for (i in seq_len(n_signals)) {
-        conv_out <- stats::convolve(X[i, ], rev(hrf), type = "open")
-        result[i, ] <- conv_out[seq_len(n_time)]
-      }
+      # Direct convolution via Rcpp implementation
+      result <- convolve_rows_rcpp(X, hrf)
     }
   } else if (is.matrix(hrf)) {
     # Multiple HRFs case (for future CBD support)
