@@ -84,3 +84,23 @@ create_chain_laplacian <- function(n_voxels) {
   Matrix::sparseMatrix(i = i, j = j, x = x, dims = c(n_voxels, n_voxels))
 }
 
+#' Compute HRF Roughness via Laplacian Quadratic Form
+#'
+#' Utility to quantify spatial roughness of voxel-wise HRFs using a graph
+#' Laplacian. The result is the average quadratic form across basis functions.
+#'
+#' @param H Matrix of HRF coefficients (V x L)
+#' @param L Graph Laplacian (V x V)
+#'
+#' @return Numeric roughness value
+#' @export
+compute_roughness <- function(H, L) {
+  if (!is.matrix(H)) H <- as.matrix(H)
+  total <- 0
+  for (b in seq_len(ncol(H))) {
+    h <- H[, b]
+    total <- total + as.numeric(t(h) %*% L %*% h)
+  }
+  total / ncol(H)
+}
+

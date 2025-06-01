@@ -23,6 +23,9 @@ NULL
 #' @param snr Signal-to-noise ratio
 #' @param spatial_smooth Logical, add spatial smoothness to patterns
 #' @param temporal_smooth Logical, add temporal smoothness (for CLD)
+#' @param spatial_hrf Optional list controlling spatially smooth HRFs. When
+#'   provided, should contain elements `correlation_length` (in voxels) and
+#'   `smoothness` (0-1) controlling the strength of smoothing.
 #' @param transition_matrix K x K transition matrix (for CBD), if NULL uses random
 #' @param pi0 Optional length-K vector of initial state probabilities (CBD)
 #' @param state_design K x T design matrix (for supervised mode), if NULL generates states
@@ -38,6 +41,7 @@ NULL
 #'   \item{V_mat}{K x rank matrix of state loadings}
 #'   \item{X}{K x T matrix of convolved states}
 #'   \item{hrf}{HRF kernel used}
+#'   \item{H}{V x length(hrf) matrix of voxel-specific HRFs}
 #'   \item{noise}{V x T matrix of noise added}
 #'   \item{Pi}{K x K transition matrix used for state simulation (CBD)}
 #'   \item{pi0}{Length-K vector of initial state probabilities (CBD)}
@@ -63,6 +67,7 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
                                snr = 1,
                                spatial_smooth = TRUE,
                                temporal_smooth = TRUE,
+                               spatial_hrf = NULL,
                                transition_matrix = NULL,
                                pi0 = NULL,
                                state_design = NULL,
@@ -136,12 +141,30 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
   
   # Setup HRF
   hrf <- setup_hrf_kernel(hrf_spec, TR = TR)
-  
-  # Convolve states with HRF
-  X <- convolve_with_hrf(S, hrf)
-  
-  # Generate signal: Y = W * X = U * V_mat * X
-  signal <- W %*% X
+
+  # Optionally generate spatially varying HRF amplitudes
+  if (!is.null(spatial_hrf)) {
+    dims_hrf <- dims %||% determine_spatial_dims(V)
+    amp_field <- array(rnorm(V), dim = dims_hrf)
+    amp_smooth <- spatial_smooth_3d(amp_field,
+                                   sigma = spatial_hrf$correlation_length / 2)
+    amp <- scale(as.vector(amp_smooth))[, 1]
+    amp <- 1 + spatial_hrf$smoothness * amp
+
+    X <- convolve_with_hrf(S, hrf)
+    true_hrf <- matrix(0, V, length(hrf))
+    signal <- matrix(0, V, T)
+    for (v in seq_len(V)) {
+      h_v <- amp[v] * hrf
+      true_hrf[v, ] <- h_v
+      X_v <- convolve_with_hrf(S, h_v)
+      signal[v, ] <- drop(W[v, ] %*% X_v)
+    }
+  } else {
+    X <- convolve_with_hrf(S, hrf)
+    signal <- W %*% X
+    true_hrf <- matrix(hrf, nrow = V, ncol = length(hrf), byrow = TRUE)
+  }
   
   # Generate structured noise
   noise <- generate_structured_noise(V, T, dims)
@@ -168,6 +191,7 @@ simulate_fmri_data <- function(V = 1000, T = 200, K = 3, rank = NULL,
     V_mat = V_mat,
     X = X,
     hrf = hrf,
+    H = true_hrf,
     noise = noise_scaled,
     Pi = if (algorithm == "CBD") transition_matrix else NULL,
     pi0 = if (algorithm == "CBD") pi0 else NULL,
