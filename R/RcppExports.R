@@ -90,8 +90,9 @@ convolve_rows_rcpp <- function(X, hrf, n_threads = 0L) {
 #' Voxel-specific HRF convolution
 #'
 #' Performs convolution of each row of `design` with each voxel's HRF.
-#' Currently always uses direct convolution; `fft_threshold` is kept
-#' for compatibility with unit tests.
+#' Uses direct convolution for short series and automatically switches
+#' to an FFT-based method when the number of time points exceeds
+#' `fft_threshold`.
 #'
 #' @param design Matrix of regressors (K x T)
 #' @param hrfs   Matrix of HRF kernels (V x L)

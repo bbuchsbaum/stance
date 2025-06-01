@@ -13,7 +13,9 @@ This vignette collects practical tips for maximising performance when fitting mo
 
 ## Key Recommendations
 
-1. **FFT Convolution**: signals longer than 256 time points automatically use FFT-based convolution for efficiency.
+1. **FFT Convolution**: signals longer than 256 time points automatically
+   switch to FFT-based convolution (both in R and in the C++ helper
+   `convolve_voxel_hrf_rcpp`) for efficiency.
 2. **Low-Rank Likelihoods**: the CBD uses low-rank spatial factors to reduce computational load.
 3. **Batched GMRF Updates**: when `use_gmrf = TRUE`, HRF updates are solved in blocks for speed.
 4. **Stochastic VB**: supply a `batch_size` to `fit()` to enable stochastic updates on large datasets.
