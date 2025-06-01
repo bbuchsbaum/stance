@@ -516,10 +516,18 @@ ContinuousBayesianDecoder <- R6::R6Class(
       }
     },
     
-    # E-step R implementation (placeholder)
+    # E-step R implementation
+    #
+    # Mirrors the C++ path by first computing the state-specific
+    # log-likelihoods and then running the forward–backward algorithm
+    # using the currently selected R engine helpers.  The updated
+    # posteriors are stored in `.S_gamma` and `.S_xi`.
     .e_step_r = function() {
-      # TODO: Implement R version for comparison
-      stop("R implementation not yet available")
+      log_lik <- private$.compute_log_likelihoods()
+      fb <- private$.forward_backward(log_lik)
+      private$.S_gamma <- fb$gamma
+      private$.S_xi <- fb$xi
+      invisible(NULL)
     },
     
     # M-step implementation
