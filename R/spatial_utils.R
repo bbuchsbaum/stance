@@ -44,16 +44,21 @@ get_spatial_neighbors <- function(mask, connectivity = 6) {
   neighbors <- vector("list", n_vox)
   dims <- dim(mask_arr)
 
+  # precompute linear indices for all voxel coordinates
+  coord_idx <- coords[,1] + (coords[,2]-1) * dims[1] +
+    (coords[,3]-1) * dims[1] * dims[2]
+
   for (i in seq_len(n_vox)) {
     nb_coords <- sweep(offsets, 2, coords[i, ], "+")
-    valid <- apply(nb_coords, 1, function(nc) {
-      all(nc > 0) && nc[1] <= dims[1] && nc[2] <= dims[2] && nc[3] <= dims[3] &&
-        mask_arr[nc[1], nc[2], nc[3]]
-    })
+    valid <- nb_coords[,1] > 0 & nb_coords[,1] <= dims[1] &
+             nb_coords[,2] > 0 & nb_coords[,2] <= dims[2] &
+             nb_coords[,3] > 0 & nb_coords[,3] <= dims[3] &
+             mask_arr[ nb_coords ]
     if (any(valid)) {
       val_coords <- nb_coords[valid, , drop = FALSE]
-      neighbors[[i]] <- match(apply(val_coords,1,paste,collapse=","),
-                              apply(coords,1,paste,collapse=","))
+      nb_idx <- val_coords[,1] + (val_coords[,2]-1) * dims[1] +
+        (val_coords[,3]-1) * dims[1] * dims[2]
+      neighbors[[i]] <- match(nb_idx, coord_idx)
       neighbors[[i]] <- neighbors[[i]][!is.na(neighbors[[i]])]
     } else {
       neighbors[[i]] <- integer(0)
