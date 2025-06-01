@@ -189,7 +189,7 @@ test_that("multi-subject simulation works", {
 })
 
 test_that("event design generation works", {
-  events <- generate_event_design(K = 3, T = 100, TR = 2, 
+  events <- generate_event_design(K = 3, T = 100, TR = 2,
                                   event_duration = 2, min_isi = 4)
   
   # Check structure
@@ -206,6 +206,35 @@ test_that("event design generation works", {
     isis <- diff(events$onset)
     expect_true(all(isis >= 4))  # min_isi
   }
+})
+
+test_that("generate_event_design matches previous algorithm", {
+  old_generate <- function(K, T, TR = 2, event_duration = 2, min_isi = 4) {
+    total_time <- T * TR
+    events <- data.frame()
+    current_time <- min_isi
+
+    while (current_time < total_time - event_duration - min_isi) {
+      condition <- sample(1:K, 1)
+      events <- rbind(events, data.frame(
+        onset = current_time,
+        duration = event_duration,
+        condition = condition
+      ))
+      isi <- runif(1, min_isi, min_isi * 2)
+      current_time <- current_time + event_duration + isi
+    }
+    events
+  }
+
+  set.seed(123)
+  new_events <- generate_event_design(K = 3, T = 100, TR = 2,
+                                       event_duration = 2, min_isi = 4)
+  set.seed(123)
+  old_events <- old_generate(K = 3, T = 100, TR = 2,
+                              event_duration = 2, min_isi = 4)
+
+  expect_equal(new_events, old_events)
 })
 
 test_that("determine_spatial_dims finds reasonable dimensions", {
