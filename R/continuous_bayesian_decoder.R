@@ -264,6 +264,39 @@ ContinuousBayesianDecoder <- R6::R6Class(
         iterations = private$.iterations
       )
     },
+
+    #' @description
+    #' Run comprehensive diagnostic checks on the fitted model.
+    #' Returns a list with convergence, spatial and performance
+    #' summaries.  When `output_dir` is supplied an HTML report is
+    #' written to that location.
+    #' @param output_dir Optional directory for HTML report
+    diagnose_model_fit = function(output_dir = NULL) {
+      diagnostics <- list(
+        convergence = check_convergence_diagnostics(self),
+        parameter_recovery = if (exists("true_params", inherits = FALSE)) {
+          assess_parameter_recovery(self, true_params)
+        } else {
+          NULL
+        },
+        spatial = if (private$.use_gmrf) list(
+          hrf_smoothness = assess_hrf_smoothness(self),
+          effective_df = compute_effective_df_gmrf(self),
+          spatial_correlation = compute_spatial_autocorrelation(self)
+        ) else NULL,
+        performance = list(
+          iteration_time = NA_real_,
+          memory_peak = NA_real_,
+          meets_targets = check_performance_targets(self)
+        )
+      )
+
+      if (!is.null(output_dir)) {
+        generate_diagnostic_report(diagnostics, output_dir)
+      }
+
+      diagnostics
+    },
     
     #' @description Generate quality control report
     #' @param output_file Output HTML file path
