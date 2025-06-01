@@ -48,10 +48,15 @@ ContinuousBayesianDecoder <- R6::R6Class(
     #' @param lambda_H_prior GMRF precision parameter (default: 1.0)
     #' @param sigma2_prior Noise variance prior (default: 1.0)
     #' @param engine Computation engine ("R" or "cpp", default: "cpp")
+    #' @param use_gmrf Logical, enable spatial smoothing of HRFs
+    #' @param lambda_h Precision for the GMRF prior
+    #' @param mask Optional mask defining spatial neighbourhoods
+    #' @param connectivity Neighbour connectivity (6, 18 or 26)
     initialize = function(Y, K, r = NULL, hrf_basis = "canonical",
                          hrf_params = list(),
                          lambda_H_prior = 1.0, sigma2_prior = 1.0,
-                         engine = "cpp") {
+                         engine = "cpp", use_gmrf = FALSE, lambda_h = lambda_H_prior,
+                         mask = NULL, connectivity = 6) {
 
       # Validate basic arguments
       private$.validate_inputs(Y, K, r, hrf_basis, hrf_params)
@@ -69,13 +74,29 @@ ContinuousBayesianDecoder <- R6::R6Class(
       # Store parameters
       private$.K <- K
       private$.r <- r %||% min(20, ceiling(private$.n_voxels / 10))
-      private$.lambda_H_prior <- lambda_H_prior
+      private$.lambda_H_prior <- lambda_h
+      private$.lambda_h <- lambda_h
       private$.sigma2_prior <- sigma2_prior
       private$.engine <- match.arg(engine, c("R", "cpp"))
+      private$.use_gmrf <- isTRUE(use_gmrf)
 
       # Initialize model parameters
       private$.initialize_parameters()
-      private$.setup_gmrf_structure()
+
+      if (private$.use_gmrf) {
+        if (is.null(mask)) {
+          stop("Mask required for GMRF prior")
+        }
+        spatial_info <- get_spatial_neighbors(mask, connectivity)
+        private$.L_gmrf <- create_gmrf_laplacian(spatial_info$neighbors,
+                                                length(spatial_info$neighbors))
+        Q <- private$.lambda_h * private$.L_gmrf +
+             Matrix::Diagonal(nrow(private$.L_gmrf), 1e-6)
+        private$.Q_chol <- Matrix::Cholesky(Q)
+        private$.spatial_info <- spatial_info
+      } else {
+        private$.L_gmrf <- NULL
+      }
 
       # Setup configuration
       private$.config <- list(
@@ -247,6 +268,11 @@ ContinuousBayesianDecoder <- R6::R6Class(
     # GMRF structure
     .L_gmrf = NULL,               # Graph Laplacian
     .lambda_H_prior = NULL,       # GMRF precision
+    .lambda_h = NULL,             # alias for precision
+    .use_gmrf = FALSE,
+    .Q_chol = NULL,               # Cholesky of precision matrix
+    .spatial_info = NULL,         # neighbourhood metadata
+    .use_batched_gmrf = FALSE,
     .sigma2_prior = NULL,         # Noise prior
     
     # Computation settings
@@ -479,18 +505,45 @@ ContinuousBayesianDecoder <- R6::R6Class(
     },
     
     .update_hrf_coefficients = function() {
-      H_new <- update_hrf_coefficients(
+      if (isTRUE(private$.use_gmrf)) {
+        private$.update_H_v_gmrf()
+      } else {
+        H_new <- update_hrf_coefficients(
+          Y = private$.Y_data,
+          S_gamma = private$.S_gamma,
+          U = private$.U,
+          V = private$.V,
+          hrf_basis = private$.hrf_basis,
+          L_gmrf = private$.L_gmrf,
+          lambda_H_prior = private$.lambda_H_prior,
+          sigma2 = private$.sigma2,
+          engine = private$.engine
+        )
+        private$.H_v <- H_new
+      }
+    },
+
+    .update_H_v_gmrf = function() {
+      if (!exists("convolve_with_hrf")) {
+        source("R/hrf_utils.R")
+      }
+      H_ls <- update_hrf_coefficients_r(
         Y = private$.Y_data,
         S_gamma = private$.S_gamma,
         U = private$.U,
         V = private$.V,
         hrf_basis = private$.hrf_basis,
-        L_gmrf = private$.L_gmrf,
-        lambda_H_prior = private$.lambda_H_prior,
-        sigma2 = private$.sigma2,
-        engine = private$.engine
+        L_gmrf = NULL,
+        lambda_H_prior = 0,
+        sigma2 = private$.sigma2
       )
-      private$.H_v <- H_new
+      if (is.null(private$.Q_chol)) {
+        Q <- private$.lambda_h * private$.L_gmrf +
+             Matrix::Diagonal(nrow(private$.L_gmrf), 1e-6)
+        private$.Q_chol <- Matrix::Cholesky(Q)
+      }
+      H_sm <- Matrix::solve(private$.Q_chol, H_ls)
+      private$.H_v <- as.matrix(H_sm)
     },
     
     .update_hmm_parameters = function() {
