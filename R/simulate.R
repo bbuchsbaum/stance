@@ -428,18 +428,19 @@ generate_markov_states <- function(K, T, transition_matrix = NULL, pi0 = NULL) {
     pi0 <- pi0 / sum(pi0)
   }
 
-  # Generate state sequence
-  states <- integer(T)
-  states[1] <- sample(1:K, 1, prob = pi0)
-
-  for (t in 2:T) {
-    states[t] <- sample(1:K, 1, prob = transition_matrix[states[t-1], ])
-  }
-
-  # Convert to one-hot encoding
-  S <- matrix(0, K, T)
-  for (t in 1:T) {
-    S[states[t], t] <- 1
+  if (exists("generate_markov_states_cpp")) {
+    S <- generate_markov_states_cpp(transition_matrix, pi0, T)
+  } else {
+    # Generate state sequence in R
+    states <- integer(T)
+    states[1] <- sample(1:K, 1, prob = pi0)
+    for (t in 2:T) {
+      states[t] <- sample(1:K, 1, prob = transition_matrix[states[t-1], ])
+    }
+    S <- matrix(0, K, T)
+    for (t in 1:T) {
+      S[states[t], t] <- 1
+    }
   }
 
   list(S = S, Pi = transition_matrix, pi0 = pi0)

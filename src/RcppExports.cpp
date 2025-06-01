@@ -347,6 +347,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// generate_markov_states_cpp
+arma::mat generate_markov_states_cpp(const arma::mat& Pi, const arma::vec& pi0, int T_len);
+RcppExport SEXP _stance_generate_markov_states_cpp(SEXP PiSEXP, SEXP pi0SEXP, SEXP T_lenSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Pi(PiSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type pi0(pi0SEXP);
+    Rcpp::traits::input_parameter< int >::type T_len(T_lenSEXP);
+    rcpp_result_gen = Rcpp::wrap(generate_markov_states_cpp(Pi, pi0, T_len));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_stance_compute_gradient_fista_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_rcpp, 6},
@@ -373,6 +386,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_forward_pass_rcpp", (DL_FUNC) &_stance_forward_pass_rcpp, 3},
     {"_stance_backward_pass_rcpp", (DL_FUNC) &_stance_backward_pass_rcpp, 3},
     {"_stance_update_hrf_coefficients_batched_cpp", (DL_FUNC) &_stance_update_hrf_coefficients_batched_cpp, 4},
+    {"_stance_generate_markov_states_cpp", (DL_FUNC) &_stance_generate_markov_states_cpp, 3},
     {NULL, NULL, 0}
 };
 
