@@ -102,6 +102,7 @@ test_that("neuroimaging output format works", {
 
 test_that("generate_markov_states produces valid chains", {
   # Test Markov state generation
+  set.seed(123)
   res <- stance:::generate_markov_states(K = 3, T = 100)
   states <- res$S
 
@@ -114,6 +115,7 @@ test_that("generate_markov_states produces valid chains", {
   trans_mat <- matrix(c(0.8, 0.1, 0.1,
                         0.2, 0.7, 0.1,
                         0.1, 0.2, 0.7), 3, 3, byrow = TRUE)
+  set.seed(123)
   states2 <- stance:::generate_markov_states(K = 3, T = 1000, trans_mat)$S
   
   # Should have more self-transitions due to diagonal dominance
@@ -122,6 +124,7 @@ test_that("generate_markov_states produces valid chains", {
   expect_true(transitions < 500)  # Fewer than half should be transitions
 
   # Custom initial probabilities
+  set.seed(123)
   res_pi <- stance:::generate_markov_states(K = 3, T = 50,
                                             transition_matrix = trans_mat,
                                             pi0 = c(0.9, 0.05, 0.05))

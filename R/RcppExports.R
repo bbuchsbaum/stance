@@ -396,6 +396,20 @@ update_hrf_coefficients_batched_cpp <- function(Y, hrf_basis, ridge = 1e-6, bloc
     .Call(`_stance_update_hrf_coefficients_batched_cpp`, Y, hrf_basis, ridge, block_size)
 }
 
+
+#' Generate Markov states (C++)
+#'
+#' Samples a discrete Markov chain and returns a one-hot matrix.
+#'
+#' @param Pi Transition matrix (K x K)
+#' @param pi0 Initial state probabilities (length K)
+#' @param T_len Number of time points
+#'
+#' @return One-hot encoded state matrix (K x T)
+#' @keywords internal
+generate_markov_states_cpp <- function(Pi, pi0, T_len) {
+    .Call(`_stance_generate_markov_states_cpp`, Pi, pi0, T_len)
+
 #' Internal spatial neighbor computation
 #'
 #' Computes voxel neighbors and Laplacian entries for a 3D mask.
