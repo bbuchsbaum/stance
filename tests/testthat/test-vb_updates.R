@@ -29,7 +29,7 @@ params <- list(
   prior_Pi = NULL,
   prior_pi0 = NULL
 )
-config <- list(engine = "cpp")
+config <- list(engine = "R")
 
 # Stub implementations to avoid missing compiled code
 fb_stub <- function(Y, U, V, H_v, hrf_basis, Pi, pi0, sigma2, engine) {
