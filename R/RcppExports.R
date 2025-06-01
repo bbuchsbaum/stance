@@ -104,6 +104,18 @@ convolve_voxel_hrf_rcpp <- function(design, hrfs, fft_threshold = 256L, n_thread
     .Call(`_stance_convolve_voxel_hrf_rcpp`, design, hrfs, fft_threshold, n_threads)
 }
 
+#' Batched FFT convolution for voxel HRFs
+#'
+#' @param design Matrix of regressors (K x T)
+#' @param hrfs Matrix of HRF kernels (V x L)
+#' @param n_threads Number of threads
+#'
+#' @return 3D array (V x K x T)
+#' @keywords internal
+convolve_voxel_hrf_fft_rcpp <- function(design, hrfs, n_threads = 0L) {
+    .Call(`_stance_convolve_voxel_hrf_fft_rcpp`, design, hrfs, n_threads)
+}
+
 #' FISTA Solver for CLD
 #' 
 #' Implements the Fast Iterative Shrinkage-Thresholding Algorithm (FISTA)
@@ -208,6 +220,22 @@ compute_WtW_lowrank_rcpp <- function(V, S) {
 #' @keywords internal
 compute_log_likelihoods_rcpp <- function(Y_proj, Vmat, hrf_kernel, sigma2) {
     .Call(`_stance_compute_log_likelihoods_rcpp`, Y_proj, Vmat, hrf_kernel, sigma2)
+}
+
+#' Complete low-rank log-likelihood calculation
+#'
+#' @param Y_proj r x T matrix of projected data
+#' @param U V x r spatial basis
+#' @param Vmat K x r matrix of loadings
+#' @param H_v V x L basis coefficients
+#' @param hrf_basis HRF basis matrix
+#' @param S_gamma State posteriors (K x T)
+#' @param sigma2 Noise variance
+#'
+#' @return Matrix of log-likelihoods (K x T)
+#' @keywords internal
+compute_log_likelihood_lowrank_complete <- function(Y_proj, U, Vmat, H_v, hrf_basis, S_gamma, sigma2) {
+    .Call(`_stance_compute_log_likelihood_lowrank_complete`, Y_proj, U, Vmat, H_v, hrf_basis, S_gamma, sigma2)
 }
 
 #' Forward Algorithm (Rcpp)

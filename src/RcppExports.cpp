@@ -27,6 +27,36 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// convolve_voxel_hrf_fft_rcpp
+arma::cube convolve_voxel_hrf_fft_rcpp(const arma::mat& design, const arma::mat& hrfs, int n_threads);
+RcppExport SEXP _stance_convolve_voxel_hrf_fft_rcpp(SEXP designSEXP, SEXP hrfsSEXP, SEXP n_threadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type design(designSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type hrfs(hrfsSEXP);
+    Rcpp::traits::input_parameter< int >::type n_threads(n_threadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(convolve_voxel_hrf_fft_rcpp(design, hrfs, n_threads));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_log_likelihood_lowrank_complete
+arma::mat compute_log_likelihood_lowrank_complete(const arma::mat& Y_proj, const arma::mat& U, const arma::mat& Vmat, const arma::mat& H_v, const arma::mat& hrf_basis, const arma::mat& S_gamma, double sigma2);
+RcppExport SEXP _stance_compute_log_likelihood_lowrank_complete(SEXP Y_projSEXP, SEXP USEXP, SEXP VmatSEXP, SEXP H_vSEXP, SEXP hrf_basisSEXP, SEXP S_gammaSEXP, SEXP sigma2SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y_proj(Y_projSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type U(USEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Vmat(VmatSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type H_v(H_vSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type hrf_basis(hrf_basisSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type S_gamma(S_gammaSEXP);
+    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_log_likelihood_lowrank_complete(Y_proj, U, Vmat, H_v, hrf_basis, S_gamma, sigma2));
+    return rcpp_result_gen;
+END_RCPP
+}
 // compute_gradient_fista_precomp_rcpp
 arma::mat compute_gradient_fista_precomp_rcpp(const arma::mat& WtY, const arma::mat& WtW, const arma::mat& H_star_X, const arma::vec& hrf_kernel);
 RcppExport SEXP _stance_compute_gradient_fista_precomp_rcpp(SEXP WtYSEXP, SEXP WtWSEXP, SEXP H_star_XSEXP, SEXP hrf_kernelSEXP) {
@@ -330,6 +360,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_compute_WtY_lowrank_rcpp", (DL_FUNC) &_stance_compute_WtY_lowrank_rcpp, 4},
     {"_stance_compute_WtW_lowrank_rcpp", (DL_FUNC) &_stance_compute_WtW_lowrank_rcpp, 2},
     {"_stance_compute_log_likelihoods_rcpp", (DL_FUNC) &_stance_compute_log_likelihoods_rcpp, 4},
+    {"_stance_compute_log_likelihood_lowrank_complete", (DL_FUNC) &_stance_compute_log_likelihood_lowrank_complete, 7},
     {"_stance_parallel_glm_fit_rcpp", (DL_FUNC) &_stance_parallel_glm_fit_rcpp, 4},
     {"_stance_parallel_ridge_glm_rcpp", (DL_FUNC) &_stance_parallel_ridge_glm_rcpp, 5},
     {"_stance_check_openmp_support", (DL_FUNC) &_stance_check_openmp_support, 0},
@@ -338,6 +369,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_compute_tv_rcpp", (DL_FUNC) &_stance_compute_tv_rcpp, 1},
     {"_stance_prox_tv_dual", (DL_FUNC) &_stance_prox_tv_dual, 4},
     {"_stance_convolve_voxel_hrf_rcpp", (DL_FUNC) &_stance_convolve_voxel_hrf_rcpp, 4},
+    {"_stance_convolve_voxel_hrf_fft_rcpp", (DL_FUNC) &_stance_convolve_voxel_hrf_fft_rcpp, 3},
     {"_stance_forward_pass_rcpp", (DL_FUNC) &_stance_forward_pass_rcpp, 3},
     {"_stance_backward_pass_rcpp", (DL_FUNC) &_stance_backward_pass_rcpp, 3},
     {"_stance_update_hrf_coefficients_batched_cpp", (DL_FUNC) &_stance_update_hrf_coefficients_batched_cpp, 4},

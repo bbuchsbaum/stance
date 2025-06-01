@@ -45,6 +45,20 @@ test_that("compute_log_likelihoods_rcpp matches R version", {
   expect_equal(ll_cpp, ll_r, tolerance = 1e-8)
 })
 
+test_that("complete low-rank likelihood matches simple version", {
+  set.seed(124)
+  r <- 3; T_len <- 10; K <- 2; V <- 5; L <- 3
+  Y_proj <- matrix(rnorm(r*T_len), r, T_len)
+  U <- matrix(rnorm(V*r), V, r)
+  Vmat <- matrix(rnorm(K*r), K, r)
+  H_v <- matrix(runif(V*L), V, L)
+  h_basis <- matrix(runif(4*L), 4, L)
+  gamma <- matrix(runif(K*T_len), K, T_len)
+  sigma2 <- 1.0
+  ll_full <- compute_log_likelihood_lowrank_complete(Y_proj, U, Vmat, H_v, h_basis, gamma, sigma2)
+  expect_equal(dim(ll_full), c(K, T_len))
+})
+
 test_that("forward and backward passes match R implementations", {
   set.seed(321)
   K <- 3; T_len <- 6
