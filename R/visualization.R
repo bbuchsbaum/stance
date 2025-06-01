@@ -23,15 +23,44 @@ NULL
 #' @export
 #' @importFrom graphics par image
 plot_spatial_maps <- function(W, layout = NULL, zlim = NULL,
-                              col = heat.colors(100), titles = NULL, mask = NULL) {
+                              col = heat.colors(100), titles = NULL, mask = NULL,
+                              states = NULL, slice_coords = NULL,
+                              threshold = 2, template = NULL) {
+  if (inherits(W, "ContinuousBayesianDecoder")) {
+    cbd_object <- W
+    if (is.null(states)) states <- 1:cbd_object$n_states
+    W <- cbd_object$get_spatial_maps(as_neurovol = FALSE)
+
+    if (!is.null(cbd_object$.__enclos_env__$private$.neuro_metadata)) {
+      space_info <- cbd_object$.__enclos_env__$private$.neuro_metadata$space
+      plot_list <- list()
+      for (k in states) {
+        vol_k <- neuroim2::NeuroVol(data = W[, k], space = space_info)
+        vol_k_z <- (vol_k - mean(vol_k)) / stats::sd(vol_k)
+        vol_k_z[abs(vol_k_z) < threshold] <- 0
+        if (!is.null(template)) {
+          p <- neuroim2::overlay(template, vol_k_z, zlim = c(-4, 4), alpha = 0.7)
+        } else {
+          p <- neuroim2::plot(vol_k_z, slices = slice_coords)
+        }
+        plot_list[[k]] <- p
+      }
+      if (length(plot_list) > 1) {
+        do.call(gridExtra::grid.arrange, c(plot_list, ncol = 2))
+      }
+      return(invisible(NULL))
+    } else {
+      return(plot_spatial_maps_basic(W[, states, drop = FALSE]))
+    }
+  }
+
   # Handle NeuroVol input
   if (is.list(W) && all(sapply(W, inherits, "NeuroVol"))) {
-    # Extract matrices from NeuroVol objects
     W_mat <- sapply(W, as.vector)
   } else if (is.matrix(W)) {
     W_mat <- W
   } else {
-    stop("W must be a matrix or list of NeuroVol objects")
+    stop("W must be a matrix, list of NeuroVol objects, or ContinuousBayesianDecoder")
   }
   
   V <- nrow(W_mat)
@@ -392,4 +421,26 @@ qc_report <- function(decoder, output_file) {
   unlink(tmpdir, recursive = TRUE)
   message("QC report written to ", output_file)
   invisible(output_file)
+}
+
+#' Basic spatial map visualization (matrix input)
+#' @keywords internal
+plot_spatial_maps_basic <- function(W) {
+  K <- ncol(W)
+  V <- nrow(W)
+  layout <- c(ceiling(sqrt(K)), ceiling(K / ceiling(sqrt(K))))
+  old_par <- par(no.readonly = TRUE)
+  on.exit(par(old_par))
+  par(mfrow = layout, mar = c(2, 2, 3, 1))
+  dims <- try_reshape_vector(V)
+  for (k in seq_len(K)) {
+    vals <- W[, k]
+    total <- prod(dims)
+    if (total > length(vals)) {
+      vals <- c(vals, rep(NA, total - length(vals)))
+    }
+    image(matrix(vals, dims[1], dims[2]), col = heat.colors(100), axes = FALSE,
+          main = paste("State", k))
+  }
+  invisible(NULL)
 }

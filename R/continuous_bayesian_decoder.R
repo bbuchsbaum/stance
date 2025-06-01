@@ -585,13 +585,20 @@ ContinuousBayesianDecoder <- R6::R6Class(
         lambda_H_prior = 0,
         sigma2 = private$.sigma2
       )
-      if (is.null(private$.Q_chol)) {
-        Q <- private$.lambda_h * private$.L_gmrf +
-             Matrix::Diagonal(nrow(private$.L_gmrf), 1e-6)
-        private$.Q_chol <- Matrix::Cholesky(Q)
+      XtX <- Matrix::Diagonal(nrow(private$.L_gmrf))
+      if (exists("solve_gmrf_batched")) {
+        H_sm <- solve_gmrf_batched(XtX, private$.L_gmrf, H_ls,
+                                   private$.lambda_h, block_size = 64L)
+        private$.H_v <- as.matrix(H_sm)
+      } else {
+        if (is.null(private$.Q_chol)) {
+          Q <- private$.lambda_h * private$.L_gmrf +
+               Matrix::Diagonal(nrow(private$.L_gmrf), 1e-6)
+          private$.Q_chol <- Matrix::Cholesky(Q)
+        }
+        H_sm <- Matrix::solve(private$.Q_chol, H_ls)
+        private$.H_v <- as.matrix(H_sm)
       }
-      H_sm <- Matrix::solve(private$.Q_chol, H_ls)
-      private$.H_v <- as.matrix(H_sm)
     },
     
     .update_hmm_parameters = function() {

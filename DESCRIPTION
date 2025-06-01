@@ -23,6 +23,7 @@ Imports:
     cli,
     Rcpp (>= 1.0.0),
     RcppArmadillo,
+    RcppEigen,
     Matrix,
     ggplot2,
     dplyr,
@@ -31,9 +32,10 @@ Imports:
     MASS,
     stats,
     methods
-LinkingTo: 
+LinkingTo:
     Rcpp,
-    RcppArmadillo
+    RcppArmadillo,
+    RcppEigen
 Suggests:
     testthat (>= 3.0.0),
     knitr,

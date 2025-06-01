@@ -387,6 +387,23 @@ BEGIN_RCPP
 END_RCPP
 }
 
+// solve_gmrf_batched
+Eigen::MatrixXd solve_gmrf_batched(const Eigen::SparseMatrix<double>& XtX, const Eigen::SparseMatrix<double>& L_gmrf, const Eigen::MatrixXd& XtY, double lambda_h, int block_size, double tol);
+RcppExport SEXP _stance_solve_gmrf_batched(SEXP XtXSEXP, SEXP L_gmrfSEXP, SEXP XtYSEXP, SEXP lambda_hSEXP, SEXP block_sizeSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Eigen::SparseMatrix<double>& >::type XtX(XtXSEXP);
+    Rcpp::traits::input_parameter< const Eigen::SparseMatrix<double>& >::type L_gmrf(L_gmrfSEXP);
+    Rcpp::traits::input_parameter< const Eigen::MatrixXd& >::type XtY(XtYSEXP);
+    Rcpp::traits::input_parameter< double >::type lambda_h(lambda_hSEXP);
+    Rcpp::traits::input_parameter< int >::type block_size(block_sizeSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_gmrf_batched(XtX, L_gmrf, XtY, lambda_h, block_size, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
+
 static const R_CallMethodDef CallEntries[] = {
     {"_stance_compute_gradient_fista_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_rcpp, 6},
     {"_stance_compute_gradient_fista_precomp_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_precomp_rcpp, 4},
@@ -415,6 +432,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_backward_pass_rcpp", (DL_FUNC) &_stance_backward_pass_rcpp, 3},
     {"_stance_update_hrf_coefficients_batched_cpp", (DL_FUNC) &_stance_update_hrf_coefficients_batched_cpp, 4},
     {"_stance_generate_markov_states_cpp", (DL_FUNC) &_stance_generate_markov_states_cpp, 3},
+    {"_stance_solve_gmrf_batched", (DL_FUNC) &_stance_solve_gmrf_batched, 6},
     {NULL, NULL, 0}
 };
 

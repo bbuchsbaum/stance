@@ -430,3 +430,18 @@ laplacian_from_neighbors_cpp <- function(neighbors) {
     .Call(`_stance_laplacian_from_neighbors_cpp`, neighbors)
 }
 
+#' Batched solver for GMRF systems
+#'
+#' Solves (XtX + lambda_h * L) H = XtY using block Cholesky.
+#'
+#' @param XtX Sparse matrix (V x V)
+#' @param L_gmrf Sparse Laplacian matrix (V x V)
+#' @param XtY Right-hand side matrix (V x L)
+#' @param lambda_h GMRF precision parameter
+#' @param block_size Number of voxels per block
+#' @param tol Numerical tolerance
+#' @keywords internal
+solve_gmrf_batched <- function(XtX, L_gmrf, XtY, lambda_h, block_size = 64L, tol = 1e-6) {
+    .Call(`_stance_solve_gmrf_batched`, XtX, L_gmrf, XtY, lambda_h, block_size, tol)
+}
+
