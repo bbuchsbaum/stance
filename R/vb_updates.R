@@ -381,29 +381,4 @@ compute_residual_sum_squares <- function(Y, S_gamma, U, V, H_v, hrf_basis) {
   Y_hat <- W %*% HX
   return(sum((Y - Y_hat)^2))
   
-  # Alternative implementation below (currently unused)
-  rss <- 0
-  V_voxels <- nrow(Y)  # Number of voxels
-  K <- nrow(S_gamma)  # Number of states
-  
-  # Simplified computation - TODO full version would properly handle HRF convolution
-  for (t in seq_len(T)) {
-    y_t <- Y[, t]
-    y_hat_t <- numeric(V_voxels)
-    
-    # Compute expected observation
-    for (k in seq_len(K)) {
-      gamma_kt <- S_gamma[k, t]
-      if (gamma_kt > 1e-10) {
-        # W_k = U %*% V[k, ]
-        w_k <- U %*% V[k, ]
-        y_hat_t <- y_hat_t + gamma_kt * w_k
-      }
-    }
-    
-    # Add squared residuals
-    rss <- rss + sum((y_t - y_hat_t)^2)
-  }
-  
-  return(rss)
 }
