@@ -517,10 +517,10 @@ generate_structured_noise <- function(V, T, dims = NULL) {
   
   # Add temporal autocorrelation (AR1)
   ar_coef <- 0.3
-  for (v in 1:V) {
-    noise[v, ] <- stats::filter(noise[v, ], filter = ar_coef, 
-                                method = "recursive")
-  }
+  # Vectorized AR1 filter across voxels
+  noise <- t(apply(noise, 1, function(row) {
+    as.numeric(stats::filter(row, filter = ar_coef, method = "recursive"))
+  }))
   
   # Add spatial correlation if dimensions provided
   if (!is.null(dims) && prod(dims) == V) {
