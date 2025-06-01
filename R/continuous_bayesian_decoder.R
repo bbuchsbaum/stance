@@ -606,15 +606,23 @@ ContinuousBayesianDecoder <- R6::R6Class(
       # Simple Gaussian priors on U and V
       prior_params <- -0.5 * (sum(private$.U^2) + sum(private$.V^2))
 
-      # GMRF prior on HRF coefficients
-      gmrf_prior <- 0
+      # Spatial GMRF prior on HRF coefficients
+      gmrf_term <- 0
       if (!is.null(private$.L_gmrf) && private$.lambda_H_prior > 0 &&
-            !is.null(private$.H_v)) {
+          !is.null(private$.H_v)) {
         for (b in seq_len(ncol(private$.H_v))) {
           h_b <- private$.H_v[, b]
-          gmrf_prior <- gmrf_prior - 0.5 * private$.lambda_H_prior *
+          gmrf_term <- gmrf_term +
             as.numeric(t(h_b) %*% private$.L_gmrf %*% h_b)
         }
+
+        # Add log-determinant component (approximation)
+        n_vox <- nrow(private$.H_v)
+        log_det <- 0.5 * (n_vox - 1) * log(private$.lambda_h)
+
+        gmrf_prior <- log_det - 0.5 * private$.lambda_h * gmrf_term
+      } else {
+        gmrf_prior <- 0
       }
 
       hrf_prior <- -0.5 * private$.lambda_H_prior * sum(private$.H_v^2)
