@@ -396,3 +396,23 @@ update_hrf_coefficients_batched_cpp <- function(Y, hrf_basis, ridge = 1e-6, bloc
     .Call(`_stance_update_hrf_coefficients_batched_cpp`, Y, hrf_basis, ridge, block_size)
 }
 
+#' Internal spatial neighbor computation
+#'
+#' Computes voxel neighbors and Laplacian entries for a 3D mask.
+#'
+#' @param mask Logical vector representing the mask
+#' @param dims Integer vector of length 3
+#' @param connectivity Connectivity (6, 18 or 26)
+#' @keywords internal
+spatial_neighbors_cpp <- function(mask, dims, connectivity = 6L) {
+    .Call(`_stance_spatial_neighbors_cpp`, mask, dims, connectivity)
+}
+
+#' Build Laplacian from neighbor list
+#'
+#' @param neighbors List of integer vectors
+#' @keywords internal
+laplacian_from_neighbors_cpp <- function(neighbors) {
+    .Call(`_stance_laplacian_from_neighbors_cpp`, neighbors)
+}
+
