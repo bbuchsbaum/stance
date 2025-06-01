@@ -134,7 +134,7 @@ plot_state_timecourse <- function(X, type = c("line", "heatmap", "stacked"),
     X_prop[is.nan(X_prop)] <- 0
     
     # Cumulative sums for stacking
-    X_cumsum <- apply(X_prop, 2, cumsum)
+    X_cumsum <- matrixStats::colCumsums(X_prop)
     
     plot(time_axis, rep(1, T), type = "n", ylim = c(0, 1),
          xlab = xlab, ylab = "Proportion", main = main, ...)
