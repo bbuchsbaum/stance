@@ -20,3 +20,23 @@ test_that("create_gmrf_laplacian_neuroim2 produces correct structure", {
   expect_equal(Matrix::rowSums(L), rep(0, 4))
   expect_equal(as.vector(Matrix::diag(L)), rep(2, 4))
 })
+
+test_that("get_spatial_neighbors works with NeuroVol mask", {
+  skip_if_not_installed("neuroim2")
+  mask_arr <- array(1, dim = c(2,2,1))
+  vol <- neuroim2::NeuroVol(mask_arr, neuroim2::NeuroSpace(c(2,2,1)))
+  info <- get_spatial_neighbors(vol)
+  expect_equal(length(info$neighbors), 4)
+  L <- create_gmrf_laplacian(info$neighbors, length(info$neighbors))
+  expect_true(Matrix::isSymmetric(L))
+  expect_equal(Matrix::rowSums(L), rep(0, 4))
+})
+
+test_that("get_spatial_neighbors handles logical mask", {
+  mask <- array(TRUE, dim = c(2,1,1))
+  info <- get_spatial_neighbors(mask)
+  L <- create_gmrf_laplacian(info$neighbors, length(info$neighbors))
+  expect_equal(dim(L), c(2,2))
+  expect_true(Matrix::isSymmetric(L))
+  expect_equal(Matrix::rowSums(L), rep(0, 2))
+})
