@@ -34,3 +34,17 @@ normalize_rows <- function(X) {
   rs[rs == 0] <- 1
   sweep(X, 1, rs, '/')
 }
+
+#' Parse minute strings
+#'
+#' Convenience wrapper used in integration tests to convert values like
+#' "90 minutes" to a numeric value in minutes.
+#'
+#' @param x Character string
+#'
+#' @return Numeric minutes
+#' @keywords internal
+parse_minutes <- function(x) {
+  parse_time(x)
+}
+

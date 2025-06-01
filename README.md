@@ -27,3 +27,8 @@ RcppArmadillo.  When the package is compiled without these functions,
 pure R fallbacks are used automatically.  All routines operate on plain
 matrices or on `neuroim2::NeuroVec` objects (the data are extracted with
 metadata preserved).
+
+## Spatial Priors and Performance Tips
+
+Sprint 3 adds optional GMRF smoothing of voxel-wise HRF coefficients and stochastic VB updates for large datasets. Enable these features when constructing `ContinuousBayesianDecoder` via the `use_gmrf` and `batch_size` arguments. See `vignette("spatial-priors-with-stance", package = "stance")` for worked examples and the `performance-optimization-guide` vignette for detailed SPEED-TIPS and a small decision tree on choosing parameters.
+

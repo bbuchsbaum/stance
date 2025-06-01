@@ -1,0 +1,40 @@
+---
+title: "Spatial Priors with stance"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Spatial Priors with stance}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Introduction
+
+This vignette demonstrates how to enable Gaussian Markov Random Field (GMRF) smoothing of voxel-wise HRF coefficients in `stance`.
+
+```{r setup, echo=FALSE}
+library(stance)
+```
+
+## Simulated example
+
+```{r}
+# small simulation
+sim <- simulate_fmri_data(V = 100, T = 80, K = 3, algorithm = "CBD")
+mask_dims <- determine_spatial_dims(sim$params$V)
+mask <- array(TRUE, dim = mask_dims)
+
+cbd <- ContinuousBayesianDecoder$new(
+  Y = sim$Y,
+  K = 3,
+  r = 10,
+  use_gmrf = TRUE,
+  lambda_h = 5,
+  mask = mask
+)
+
+cbd$fit(max_iter = 5, verbose = FALSE)
+summary(cbd)
+```
+
+GMRF smoothing encourages smooth variation of HRF parameters across neighbouring voxels. Adjust `lambda_h` to control the strength of the prior.
+

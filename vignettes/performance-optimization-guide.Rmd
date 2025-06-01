@@ -1,0 +1,33 @@
+---
+title: "Performance Optimization Guide"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Performance Optimization Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# Overview
+
+This vignette collects practical tips for maximising performance when fitting models with `stance`. The guidance implements the SPEED-TIPS from `proposal.md`.
+
+## Key Recommendations
+
+1. **FFT Convolution**: signals longer than 256 time points automatically use FFT-based convolution for efficiency.
+2. **Low-Rank Likelihoods**: the CBD uses low-rank spatial factors to reduce computational load.
+3. **Batched GMRF Updates**: when `use_gmrf = TRUE`, HRF updates are solved in blocks for speed.
+4. **Stochastic VB**: supply a `batch_size` to `fit()` to enable stochastic updates on large datasets.
+
+## Parameter Decision Tree
+
+Use the following simple rules to choose settings:
+
+- *Small ROI (<200 voxels)*: keep defaults, no GMRF.
+- *Medium dataset (up to 5k voxels)*: enable `use_gmrf = TRUE`, default `lambda_h`.
+- *Large dataset (>5k voxels)*: consider stochastic VB with `batch_size` around 100.
+
+## Troubleshooting
+
+- **Convergence stalls**: try increasing `lambda_h` or reducing `batch_size`.
+- **Slow execution**: ensure Rcpp support is enabled and check OpenMP availability with `check_openmp_support()`.
+
