@@ -696,26 +696,37 @@ convert_to_neuroim <- function(sim_output, dims, TR) {
 #' @export
 generate_event_design <- function(K, T, TR = 2, event_duration = 2, min_isi = 4) {
   total_time <- T * TR
-  events <- data.frame()
-  
+
+  ev <- list()
   current_time <- min_isi  # Start after initial baseline
-  
+
   while (current_time < total_time - event_duration - min_isi) {
     # Random condition
     condition <- sample(1:K, 1)
-    
-    # Add event
-    events <- rbind(events, data.frame(
+
+    # Append event to list
+    ev[[length(ev) + 1]] <- list(
       onset = current_time,
       duration = event_duration,
       condition = condition
-    ))
-    
+    )
+
     # Move to next event time
     isi <- runif(1, min_isi, min_isi * 2)
     current_time <- current_time + event_duration + isi
   }
-  
+
+  if (length(ev) == 0) {
+    events <- data.frame(
+      onset = numeric(0),
+      duration = numeric(0),
+      condition = numeric(0)
+    )
+  } else {
+    events <- do.call(rbind, lapply(ev, as.data.frame))
+    rownames(events) <- NULL
+  }
+
   events
 }
 
