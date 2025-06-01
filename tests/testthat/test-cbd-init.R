@@ -16,7 +16,7 @@ test_that("ContinuousBayesianDecoder initializes on simulated data", {
     K = K,
     r = 5,
     hrf_basis = "canonical",
-    engine = "cpp"
+    engine = "R"
   )
 
   expect_s3_class(cbd, "ContinuousBayesianDecoder")

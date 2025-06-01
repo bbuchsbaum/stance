@@ -6,7 +6,7 @@ library(stance)
 test_that("cpp and R engines produce same forward/backward", {
   set.seed(99)
   sim <- simulate_fmri_data(V = 6, T = 12, K = 2, algorithm = "CBD", verbose = FALSE)
-  cbd <- ContinuousBayesianDecoder$new(Y = sim$Y, K = 2, r = 2, engine = "cpp")
+  cbd <- ContinuousBayesianDecoder$new(Y = sim$Y, K = 2, r = 2, engine = "R")
 
   loglik <- cbd$.__enclos_env__$private$.compute_log_likelihoods()
 

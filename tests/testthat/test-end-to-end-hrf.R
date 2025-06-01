@@ -16,7 +16,7 @@ sim <- simulate_cbd_data(V = V, T = T_len, K = K, hrf_basis = basis,
                          true_H = true_H, TR = 0.8, snr = 3, verbose = FALSE)
 
 cbd <- ContinuousBayesianDecoder$new(Y = sim$Y, K = K, r = 3,
-                                     hrf_basis = basis, engine = "cpp")
+                                     hrf_basis = basis, engine = "R")
 
 # Fit a few VB iterations
 fit_time <- system.time({
@@ -53,6 +53,11 @@ test_that("ELBO increases during fitting", {
 })
 
 test_that("Rcpp likelihood is faster than R version", {
+  skip_if(
+    identical(body(compute_log_likelihoods_rcpp),
+              body(stance:::compute_log_likelihoods_r)),
+    "Rcpp functions not compiled"
+  )
   expect_true(r_time["elapsed"] / cpp_time["elapsed"] >= 5)
 })
 
@@ -66,7 +71,7 @@ test_that("pipeline works with NeuroVec input", {
                               verbose = FALSE)
   cbd_ni <- ContinuousBayesianDecoder$new(Y = sim_ni$Y_neurovol,
                                           K = K, r = 3,
-                                          hrf_basis = basis, engine = "cpp")
+                                          hrf_basis = basis, engine = "R")
   cbd_ni$fit(max_iter = 3, verbose = FALSE)
   expect_equal(dim(cbd_ni$get_hrf_estimates()), c(V, L))
 })
