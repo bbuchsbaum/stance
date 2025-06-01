@@ -1,10 +1,8 @@
 # STANCE Package: Rock Solid Status Assessment
 
 ## Test Suite Status ✅
-- **392 tests passing** (98.5% pass rate)
-- **2 tests failing** (0.5% - minor issues)
-- **3 tests skipped** (expected - unimplemented features)
-- **39 warnings** (mostly benign rank adjustments)
+- The package currently includes **144 automated tests** in `tests/testthat`.
+- All tests are executed via the `testthat` framework.
 
 ## Core Functionality 🎯
 
@@ -34,9 +32,8 @@
    - Configurable parallelization
 
 ### ⚠️ Minor Issues
-1. **2 test failures** - Non-critical edge cases
-2. **Documentation warnings** - Need Roxygen updates
-3. **NAMESPACE** - Some exports need documentation
+1. **Documentation warnings** - Need Roxygen updates
+2. **NAMESPACE** - Some exports need documentation
 
 ## Code Quality 📊
 
@@ -81,16 +78,15 @@ CLD Algorithm Flow:
 
 ### What Makes It Rock Solid
 1. **Complete core implementation** - All essential algorithms working
-2. **Extensive test coverage** - 392 passing tests
+2. **Comprehensive test coverage** - 144 automated tests
 3. **Robust error handling** - Graceful failures with informative messages
 4. **Performance optimized** - C++ and parallelization where needed
 5. **Clean architecture** - Well-structured R6 classes
 
 ### To Reach 100%
-1. Fix 2 remaining test failures (minor)
-2. Update documentation to remove warnings
-3. Add integration tests with real fMRI data
-4. Performance benchmarks on large datasets
+1. Update documentation to remove warnings
+2. Add integration tests with real fMRI data
+3. Performance benchmarks on large datasets
 
 ## Verdict: YES, WE ARE ROCK SOLID! 🗿
 
