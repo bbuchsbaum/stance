@@ -119,7 +119,8 @@ ContinuousBayesianDecoder <- R6::R6Class(
     #' @param verbose Print progress information
     #' @param save_history Logical, keep full ELBO history
     fit = function(max_iter = 100, tol = 1e-4, verbose = TRUE,
-                   save_history = FALSE) {
+                   save_history = FALSE, batch_size = NULL,
+                   learning_rate = function(t) 1/(1 + 0.1 * t)) {
       private$.config$max_iter <- max_iter
       private$.config$tol <- tol
       private$.config$verbose <- verbose
@@ -139,27 +140,62 @@ ContinuousBayesianDecoder <- R6::R6Class(
         pb <- cli::cli_progress_bar(total = max_iter)
       }
 
-      for (iter in seq_len(max_iter)) {
-        log_lik <- private$.compute_log_likelihoods()
-        private$.forward_backward(log_lik)
+      if (is.null(batch_size)) {
+        for (iter in seq_len(max_iter)) {
+          log_lik <- private$.compute_log_likelihoods()
+          private$.forward_backward(log_lik)
 
-        private$.update_Pi()
-        private$.update_U_V()
-        private$.update_sigma2()
+          private$.update_Pi()
+          private$.update_U_V()
+          private$.update_sigma2()
 
-        elbo <- private$.compute_elbo()
-        converged <- private$.check_convergence(elbo, tol)
-        if (!save_history) {
-          private$.elbo_history <- tail(private$.elbo_history, 2)
-        }
-        if (converged) {
-          private$.converged <- TRUE
+          elbo <- private$.compute_elbo()
+          converged <- private$.check_convergence(elbo, tol)
+          if (!save_history) {
+            private$.elbo_history <- tail(private$.elbo_history, 2)
+          }
+          if (converged) {
+            private$.converged <- TRUE
+            private$.iterations <- iter
+            break
+          }
+
+          if (verbose) cli::cli_progress_update()
           private$.iterations <- iter
-          break
         }
+      } else {
+        T_total <- private$.T
+        if (batch_size < 100 || batch_size > T_total/2) {
+          warning("Batch size should be 100-150 for optimal performance")
+        }
+        for (iter in seq_len(max_iter)) {
+          batch_start <- sample.int(T_total - batch_size + 1L, 1L)
+          batch_idx <- batch_start:(batch_start + batch_size - 1L)
 
-        if (verbose) cli::cli_progress_update()
-        private$.iterations <- iter
+          Y_batch <- private$.Y_data[, batch_idx, drop = FALSE]
+          Y_proj_batch <- crossprod(private$.U, Y_batch)
+          log_lik_batch <- private$.compute_log_likelihoods(Y_proj_batch)
+          fb <- private$.forward_backward(log_lik_batch)
+
+          lr <- learning_rate(iter)
+          xi_stats <- apply(fb$xi, c(1, 2), sum)
+          private$.Pi <- (1 - lr) * private$.Pi + lr * normalize_rows(xi_stats)
+
+          private$.update_U_V_stochastic(Y_batch, fb$gamma, lr)
+          private$.update_sigma2()
+
+          if (iter %% 10 == 0) {
+            elbo <- private$.compute_elbo()
+            if (private$.check_convergence(elbo, tol)) {
+              private$.converged <- TRUE
+              private$.iterations <- iter
+              break
+            }
+          }
+
+          if (verbose) cli::cli_progress_update()
+          private$.iterations <- iter
+        }
       }
 
       if (verbose) cli::cli_progress_done()
@@ -503,6 +539,18 @@ ContinuousBayesianDecoder <- R6::R6Class(
       private$.V <- Vmat
       private$.Y_proj <- crossprod(U_new, Y)
     },
+
+    # Stochastic update of spatial components using mini-batches
+    .update_U_V_stochastic = function(Y_batch, gamma_batch, lr) {
+      res <- update_spatial_components_r(
+        Y_batch, gamma_batch, private$.H_v, private$.hrf_basis,
+        private$.U, private$.V
+      )
+      private$.U <- (1 - lr) * private$.U + lr * res$U
+      private$.U <- project_orthogonal(private$.U)
+      private$.V <- (1 - lr) * private$.V + lr * res$V
+      private$.Y_proj <- crossprod(private$.U, private$.Y_data)
+    },
     
     .update_hrf_coefficients = function() {
       if (isTRUE(private$.use_gmrf)) {
@@ -638,15 +686,15 @@ ContinuousBayesianDecoder <- R6::R6Class(
     },
 
     # Compute log likelihoods for each state/time
-    .compute_log_likelihoods = function() {
-      Y_proj <- private$.Y_proj
+    .compute_log_likelihoods = function(Y_proj_in = NULL) {
+      Y_proj <- Y_proj_in %||% private$.Y_proj
       Vmat <- private$.V
       hrf <- as.vector(private$.hrf_basis %*% colMeans(private$.H_v))
       sigma2 <- private$.sigma2
 
       r <- private$.r
       K <- private$.K
-      T_len <- private$.T
+      T_len <- ncol(Y_proj)
 
       if (is.null(Y_proj) || is.null(Vmat) || is.null(hrf)) {
         stop("Model parameters not initialized")
