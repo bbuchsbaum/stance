@@ -91,7 +91,7 @@ convolve_rows_rcpp <- function(X, hrf, n_threads = 0L) {
 #'
 #' Performs convolution of each row of `design` with each voxel's HRF.
 #' Uses direct convolution for short series and automatically switches
-#' to FFT-based convolution when the number of time points exceeds
+#' to an FFT-based method when the number of time points exceeds
 #' `fft_threshold`.
 #'
 #' @param design Matrix of regressors (K x T)
