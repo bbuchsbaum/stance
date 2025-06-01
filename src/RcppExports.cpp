@@ -348,6 +348,32 @@ BEGIN_RCPP
 END_RCPP
 }
 
+// spatial_neighbors_cpp
+List spatial_neighbors_cpp(const LogicalVector& mask, const IntegerVector& dims, int connectivity);
+RcppExport SEXP _stance_spatial_neighbors_cpp(SEXP maskSEXP, SEXP dimsSEXP, SEXP connectivitySEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const LogicalVector& >::type mask(maskSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type dims(dimsSEXP);
+    Rcpp::traits::input_parameter< int >::type connectivity(connectivitySEXP);
+    rcpp_result_gen = Rcpp::wrap(spatial_neighbors_cpp(mask, dims, connectivity));
+    return rcpp_result_gen;
+END_RCPP
+}
+
+// laplacian_from_neighbors_cpp
+List laplacian_from_neighbors_cpp(List neighbors);
+RcppExport SEXP _stance_laplacian_from_neighbors_cpp(SEXP neighborsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< List >::type neighbors(neighborsSEXP);
+    rcpp_result_gen = Rcpp::wrap(laplacian_from_neighbors_cpp(neighbors));
+    return rcpp_result_gen;
+END_RCPP
+}
+
 static const R_CallMethodDef CallEntries[] = {
     {"_stance_compute_gradient_fista_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_rcpp, 6},
     {"_stance_compute_gradient_fista_precomp_rcpp", (DL_FUNC) &_stance_compute_gradient_fista_precomp_rcpp, 4},
@@ -368,6 +394,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_stance_prox_tv_condat_rcpp", (DL_FUNC) &_stance_prox_tv_condat_rcpp, 3},
     {"_stance_compute_tv_rcpp", (DL_FUNC) &_stance_compute_tv_rcpp, 1},
     {"_stance_prox_tv_dual", (DL_FUNC) &_stance_prox_tv_dual, 4},
+    {"_stance_spatial_neighbors_cpp", (DL_FUNC) &_stance_spatial_neighbors_cpp, 3},
+    {"_stance_laplacian_from_neighbors_cpp", (DL_FUNC) &_stance_laplacian_from_neighbors_cpp, 1},
     {"_stance_convolve_voxel_hrf_rcpp", (DL_FUNC) &_stance_convolve_voxel_hrf_rcpp, 4},
     {"_stance_convolve_voxel_hrf_fft_rcpp", (DL_FUNC) &_stance_convolve_voxel_hrf_fft_rcpp, 3},
     {"_stance_forward_pass_rcpp", (DL_FUNC) &_stance_forward_pass_rcpp, 3},
