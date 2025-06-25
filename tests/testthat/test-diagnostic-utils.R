@@ -37,3 +37,13 @@ test_that("recommend_parameters returns informative message", {
   expect_match(rec, "dataset of size 5 x 8")
 })
 
+test_that("generate_diagnostic_report writes html output", {
+  diag_list <- list(a = 1, b = 2)
+  out_dir <- tempfile("diag")
+  path <- stance:::generate_diagnostic_report(diag_list, out_dir)
+  expect_true(file.exists(path))
+  content <- readLines(path)
+  expect_true(any(grepl("<h1>Model Diagnostics</h1>", content)))
+  expect_true(any(grepl("a", content)))
+})
+

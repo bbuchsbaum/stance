@@ -178,3 +178,11 @@ test_that("create_hrf_basis_fir handles TR drift edge cases", {
   expect_equal(nrow(basis), floor(31 / 0.7) + 1)
   expect_true(ncol(basis) >= 1)
 })
+
+test_that("create_hrf_basis_neuroim2 delegates to hrf_basis_matrix", {
+  basis_neuro <- create_hrf_basis_neuroim2("spmg3", TR = 1, duration = 16)
+  basis_ref   <- hrf_basis_matrix("spmg3", TR = 1, len = 16)
+  expect_equal(basis_neuro, basis_ref)
+  expect_equal(attr(basis_neuro, "basis_type"), "spmg3")
+  expect_equal(attr(basis_neuro, "TR"), 1)
+})
